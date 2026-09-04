@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Captures live in the app's own cache, so they are removed with the app and
+         never appear in the device gallery. -->
+    <cache-path name="captures" path="captures/" />
+</paths>

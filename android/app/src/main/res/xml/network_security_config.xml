@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android blocks plaintext HTTP by default from API 28 onward. The research
+  backend runs as plain HTTP on a LAN machine, so debug builds must be allowed to
+  reach it or every request fails with a cleartext-not-permitted error that looks
+  like a networking bug.
+
+  Release builds keep the default (HTTPS only). Putting a real deployment behind
+  TLS is a prerequisite for shipping this, not an optional extra.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>     <!-- emulator -> host -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <!-- Add the dev machine's LAN address here, e.g.:
+             <domain includeSubdomains="true">192.168.1.42</domain> -->
+    </domain-config>
+</network-security-config>

@@ -11,6 +11,10 @@ evaluation_results.png
 val_confusion_matrix.png
 gradcam_output/
 
+# Run logs and analysis artifacts — findings are consolidated into FINDINGS.md
+*.log
+audit_errors.csv
+
 # Python
 __pycache__/
 *.py[cod]
@@ -28,5 +32,16 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Claude Code local session/tool state — machine-specific, not portable
 .claude/
+HANDOFF.md
+FINDINGS.md
+
+
+# Feature cache and analysis artifacts
+.feature_cache/
+audit_errors_clip.csv
+
+# Prediction log. Runtime state, not source; no image data is stored in it.
+groundtruth.db
+groundtruth.db-wal
+groundtruth.db-shm

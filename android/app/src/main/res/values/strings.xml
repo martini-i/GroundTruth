@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">GroundTruth</string>
+    <string name="tagline">Slope Surface Indicator Classifier</string>
+    <string name="disclaimer">Identifies visible surface indicators of potential instability. It does not predict landslides or assess subsurface conditions. Research prototype — not a safety determination.</string>
+</resources>

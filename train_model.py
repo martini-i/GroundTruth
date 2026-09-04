@@ -15,6 +15,14 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser()
 parser.add_argument("--arch", choices=["resnet18", "efficientnet_b0"], default="resnet18",
                      help="Backbone architecture. resnet18 is the documented baseline.")
+parser.add_argument("--seed", type=int, default=None,
+                     help="Random seed. Without it, head init, shuffling and augmentation "
+                          "all vary run to run, so two runs on identical data can differ "
+                          "substantially — set it to compare runs meaningfully.")
+parser.add_argument("--model-path", default="slope_model.pth",
+                     help="Where to write the checkpoint. Override to avoid clobbering "
+                          "the working model during experiments.")
+parser.add_argument("--quiet", action="store_true", help="Suppress the per-epoch lines.")
 args = parser.parse_args()
 
 DATA_DIR = "slope_dataset"
@@ -23,7 +31,15 @@ EPOCHS = 20
 LR = 1e-3
 UNFREEZE_EPOCH = 10       # epoch at which we unfreeze the backbone for fine-tuning
 UNFREEZE_LR = 1e-4        # lower LR for backbone layers after unfreezing
-MODEL_PATH = "slope_model.pth"
+MODEL_PATH = args.model_path
+
+if args.seed is not None:
+    import random as _random
+    import numpy as _np
+    _random.seed(args.seed)
+    _np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -181,16 +197,18 @@ for epoch in range(1, EPOCHS + 1):
     history["val_loss"].append(val_loss)
     history["val_acc"].append(val_acc)
 
-    print(f"Epoch {epoch:02d}/{EPOCHS} | "
-          f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
-          f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
+    if not args.quiet:
+        print(f"Epoch {epoch:02d}/{EPOCHS} | "
+              f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
+              f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
 
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         best_val_acc = val_acc
         best_weights = copy.deepcopy(model.state_dict())
         best_val_preds, best_val_labels = val_preds, val_labels
-        print(f"  New best val loss: {best_val_loss:.4f} (val acc: {best_val_acc:.4f})")
+        if not args.quiet:
+            print(f"  New best val loss: {best_val_loss:.4f} (val acc: {best_val_acc:.4f})")
 
 # ===== SAVE =====
 model.load_state_dict(best_weights)
@@ -202,7 +220,8 @@ torch.save({
 
 print(f"\nBest Validation Accuracy: {best_val_acc:.4f}")
 print(f"Model saved to: {MODEL_PATH}")
-print("\nRun evaluate.py to see full metrics on the test set.")
+print("\nRun cross_validate.py for a trustworthy accuracy estimate — a single "
+      "fixed split overstates it by roughly 8-10 points.")
 
 # ===== CONFUSION MATRIX (VAL SET, BEST EPOCH) =====
 cm = confusion_matrix(best_val_labels, best_val_preds)
@@ -210,8 +229,18 @@ cm = confusion_matrix(best_val_labels, best_val_preds)
 print("\nConfusion Matrix (Validation Set, Best Epoch):")
 print(cm)
 
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
-disp.plot(cmap="Blues")
-plt.title("Validation Confusion Matrix")
-plt.savefig("val_confusion_matrix.png", dpi=150)
-plt.show()
+# Machine-readable line so repeated runs can be compared without parsing the matrix.
+# The difference between the two recalls is deliberately not printed: it is a
+# difference of two noisy ratios and carries the noise of both, so it swings
+# widely between runs that changed nothing meaningful. Report the recalls.
+stable_rec = cm[0][0] / cm[0].sum() * 100
+unstable_rec = cm[1][1] / cm[1].sum() * 100
+print(f"RESULT seed={args.seed} val_loss={best_val_loss:.4f} val_acc={best_val_acc:.4f} "
+      f"stable_recall={stable_rec:.1f} unstable_recall={unstable_rec:.1f}")
+
+if not args.quiet:
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+    disp.plot(cmap="Blues")
+    plt.title("Validation Confusion Matrix")
+    plt.savefig("val_confusion_matrix.png", dpi=150)
+    plt.show()

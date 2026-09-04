@@ -1,6 +1,6 @@
-# Production/deployment dependencies for the FastAPI backend + model inference.
-# Does NOT include dev-only tools (gradio, scikit-learn, matplotlib) — those stay
-# in the root requirements.txt for local training/evaluation work.
+# Runtime dependencies for the FastAPI backend + model inference.
+# Does NOT include dev-only tools (matplotlib, used by train_model.py) — those
+# stay in the root requirements.txt for local training and analysis work.
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9
@@ -10,3 +10,7 @@ Pillow>=9.0.0
 numpy>=1.24.0
 grad-cam>=1.5.0
 transformers>=4.40.0
+# The deployed classifier is a scikit-learn probe loaded from slope_probe.joblib,
+# so both are runtime dependencies, not just training ones.
+scikit-learn>=1.3.0
+joblib>=1.3.0

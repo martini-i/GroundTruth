@@ -11,9 +11,21 @@ export default function ImageUpload({ onFileSelected, previewUrl }) {
   }
 
   return (
+    // Exposed as a button: the real <input type="file"> is visually hidden, so
+    // without a role/tabIndex and key handling there is no keyboard path to
+    // uploading at all.
     <div
       className={`upload-dropzone${dragOver ? " drag-over" : ""}${previewUrl ? " has-preview" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-label={previewUrl ? "Replace the selected slope photo" : "Upload a ground-level slope photo"}
       onClick={() => inputRef.current?.click()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         setDragOver(true);
@@ -41,7 +53,7 @@ export default function ImageUpload({ onFileSelected, previewUrl }) {
             <path d="M7 9l5-5 5 5" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M12 4v13" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <p>Drop a slope image here, or click to upload</p>
+          <p>Drop a ground-level slope photo, click to upload, or paste</p>
         </div>
       )}
     </div>

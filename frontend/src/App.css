@@ -12,6 +12,8 @@
   --stable-bg: #eefaf2;
   --unstable: #c93a2e;
   --unstable-bg: #fdf0ef;
+  --borderline: #b07407;
+  --borderline-bg: #fdf5e6;
   --track-bg: #eceef3;
   --btn-secondary-bg: #eef0f5;
   --btn-secondary-text: #33333d;
@@ -46,6 +48,8 @@
   --stable-bg: #16261d;
   --unstable: #ff8579;
   --unstable-bg: #2c1a18;
+  --borderline: #e0a83c;
+  --borderline-bg: #2a2318;
   --track-bg: #23242e;
   --btn-secondary-bg: #23242e;
   --btn-secondary-text: #e7e7ec;
@@ -168,6 +172,12 @@ blockquote {
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
 
+.upload-dropzone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-color: var(--accent);
+}
+
 .upload-dropzone:hover {
   border-color: var(--accent-2);
 }
@@ -258,6 +268,38 @@ blockquote {
   filter: brightness(1.06);
 }
 
+/* Tertiary action — deliberately not flex:1 so it stays narrow next to the
+   two primary actions rather than competing with them for width. */
+.btn-ghost {
+  flex: 0 0 auto;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.crop-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  padding-left: 0.2rem;
+}
+
 .spinner {
   width: 14px;
   height: 14px;
@@ -297,6 +339,35 @@ blockquote {
   .examples-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  /* The brand block and the theme toggle can't share one row at phone widths —
+     without wrapping, the toggle's white-space:nowrap pushes the page wider
+     than the viewport and the whole layout scrolls sideways. */
+  .app {
+    padding: 1.75rem 1rem 3rem;
+  }
+
+  .top-bar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+  }
+
+  .button-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* Long unbroken strings (filenames, URLs in error text) must not be able to
+   widen the page on narrow screens. */
+.app,
+.app p,
+.app li,
+.app blockquote {
+  overflow-wrap: break-word;
 }
 
 .example-card {
@@ -347,11 +418,30 @@ blockquote {
 .placeholder {
   border: 1px dashed var(--border);
   border-radius: var(--radius);
-  padding: 2.5rem 1.5rem;
+  padding: 2.75rem 1.5rem;
   text-align: center;
   color: var(--text-muted);
   font-size: 0.9rem;
   background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.placeholder svg {
+  opacity: 0.4;
+  margin-bottom: 0.3rem;
+}
+
+.placeholder p {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.placeholder span {
+  font-size: 0.82rem;
 }
 
 .confidence-bars,
@@ -397,6 +487,23 @@ blockquote {
   border-radius: 999px;
   height: 10px;
   overflow: hidden;
+  position: relative;
+}
+
+.confidence-threshold {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--text);
+  opacity: 0.65;
+}
+
+.confidence-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.6rem 0 0;
 }
 
 .confidence-fill {
@@ -430,6 +537,23 @@ blockquote {
   border-color: var(--unstable);
 }
 
+/* The 0.35-0.65 band. Shown distinctly because it is the model saying it is
+   uncertain, which is a different claim from "unstable" and should not borrow
+   its alarm. */
+.assessment-card--borderline {
+  background: var(--borderline-bg);
+  border-color: var(--borderline);
+}
+
+.assessment-headline {
+  font-weight: 650;
+  font-size: 1.02rem !important;
+  margin-bottom: 0.3rem !important;
+}
+.assessment-card--stable     .assessment-headline { color: var(--stable); }
+.assessment-card--unstable   .assessment-headline { color: var(--unstable); }
+.assessment-card--borderline .assessment-headline { color: var(--borderline); }
+
 .assessment-card p {
   margin: 0;
   font-size: 0.97rem;
@@ -441,6 +565,40 @@ blockquote {
   max-width: 100%;
   border-radius: var(--radius-sm);
   display: block;
+}
+
+.gradcam-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Mirrors OpenCV's COLORMAP_JET, which is what show_cam_on_image renders with —
+   a generic blue-to-red ramp would mislabel the green/yellow mid-range. */
+.gradcam-scale {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #00007f,
+    #0000ff,
+    #00ffff,
+    #7fff7f,
+    #ffff00,
+    #ff0000,
+    #7f0000
+  );
+}
+
+.gradcam-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 0;
+  line-height: 1.5;
 }
 
 .error {
@@ -469,4 +627,230 @@ footer ul {
 
 footer li {
   margin-bottom: 0.2rem;
+}
+
+/* ===== Tab navigation ===== */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1.1rem 0 1.4rem;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.tab {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  /* Reserve the underline space on every tab so switching does not shift layout. */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--text);
+  background: var(--bg-panel);
+}
+
+.tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===== Static content pages ===== */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.page-block h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.page-block > p {
+  color: var(--text-muted);
+  line-height: 1.65;
+  margin: 0 0 0.4rem;
+  max-width: 68ch;
+}
+
+.page-lead {
+  margin-bottom: 1.1rem !important;
+}
+
+.page-note {
+  font-size: 0.82rem;
+  margin-top: 0.9rem !important;
+}
+
+/* ===== Pipeline steps ===== */
+.steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.step {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.step-num {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.5rem;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.step h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.25rem;
+}
+
+.step p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ===== Indicator / limitation cards ===== */
+.indicator-grid,
+.limit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.7rem;
+}
+
+.indicator,
+.limit {
+  padding: 0.9rem 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.indicator h3,
+.limit h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.9rem;
+}
+
+.indicator p,
+.limit p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* ===== Stats ===== */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.7rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.1rem 1.2rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.stat-value {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-spread {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.stat-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ===== Indicator tags ===== */
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.tag em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* --- Model warmup notice ----------------------------------------------- */
+/* Shown only while /health reports models_ready:false. A cold backend loads
+   CLIP and SegFormer lazily, so without this the first analysis looks hung. */
+.warming {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1.1rem;
+  padding: 0.7rem 0.95rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
 }

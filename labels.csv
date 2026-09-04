@@ -1,80 +1,78 @@
 filename,split,label,primary_indicator,confidence,source,site_id,notes
-stable_cliff_001.jpg,train,stable,natural_bedrock,high,field,,layered sea-cliff bedding intact; people visible for scale
-stable_cliff_003.jpg,train,stable,natural_bedrock,high,field,,"sandstone canyon wall, intact bedding, no cracks"
-stable_cliff_004.jpg,train,stable,natural_bedrock,high,field,,"sandstone canyon roadside, intact"
-stable_cliff_005.jpg,train,stable,natural_bedrock,high,field,,"tafoni/honeycomb weathering - natural erosion pattern, not an instability indicator"
-stable_rock_002.jpg,train,stable,natural_bedrock,high,field,,"layered desert badlands strata, distant view"
-stable_rock_003.jpg,train,stable,natural_bedrock,medium,field,,roadside granite boulders; motion blur from moving vehicle
-stable_slope_002.jpg,train,stable,engineered_vegetated,high,field,,grass highway embankment with guardrail
-stable_slope_003.png,train,stable,dry_vegetation,medium,unknown,,"panoramic stitch artifact, looks like a Street View screenshot - verify source/license before any publication"
-stable_slope_005.png,train,stable,engineered_vegetated,high,field,,"grass embankment above parking lot; parked cars visible in foreground lot, not on the slope itself"
-stable_slope_006.jpg,train,stable,regrowth_vegetation,high,field,,dirt roadside slope with young vegetation regrowth
+stable_cliff_001.jpg,train,stable,bedrock,high,field,,layered sea-cliff bedding intact; people visible for scale
+stable_cliff_003.jpg,train,stable,bedrock,high,field,,"sandstone canyon wall, intact bedding, no cracks"
+stable_cliff_004.jpg,train,stable,bedrock,high,field,,"sandstone canyon roadside, intact"
+stable_cliff_005.jpg,train,stable,bedrock,high,field,,"tafoni/honeycomb weathering - natural erosion pattern, not an instability indicator"
+stable_rock_003.jpg,train,stable,bedrock,medium,field,,roadside granite boulders; motion blur from moving vehicle
+stable_slope_002.jpg,train,stable,engineered,high,field,,grass highway embankment with guardrail
+stable_slope_003.png,train,stable,vegetation,medium,unknown,,"panoramic stitch artifact, looks like a Street View screenshot - verify source/license before any publication"
+stable_slope_005.png,train,stable,engineered,high,field,,"grass embankment above parking lot; parked cars visible in foreground lot, not on the slope itself"
+stable_slope_006.jpg,train,stable,vegetation,high,field,,dirt roadside slope with young vegetation regrowth
 stable_slope_007.png,train,stable,engineered,high,field,,"erosion-control matting / hydroseed blanket, clearly engineered"
-stable_slope_008.png,train,stable,engineered_vegetated,high,field,,grassy urban slope near a building
-stable_slope_009.png,train,stable,dry_vegetation,medium,unknown,,looks like a Street View screenshot - verify source/license before any publication
-stable_slope_010.png,train,stable,dry_vegetation,medium,unknown,,looks like a Street View screenshot - verify source/license before any publication
-stable_slope_011.png,train,stable,dry_vegetation,medium,unknown,,looks like a Street View screenshot - verify source/license before any publication
-stable_slope_012.png,train,stable,dry_vegetation,medium,unknown,,looks like a Street View screenshot - verify source/license before any publication
-stable_slope_013.png,train,stable,natural_bedrock,high,field,,fractured roadcut with yucca; no movement evidence
-stable_slope_015.png,train,stable,natural_bedrock,high,field,,weathered fractured bedrock roadcut
-stable_slope_14.png,train,stable,dry_vegetation,high,field,,"yucca/dry chaparral hillside, natural"
-stable_rock_004.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_rockhousefell,"Wikimedia Commons, CC BY-SA 2.0, geograph 4345724, Rock outcrop on Rock House Fell"
-stable_rock_005.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_geograph8331979,"Wikimedia Commons, CC BY-SA 2.0, geograph 8331979"
-stable_rock_006.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_scotchrockfarm,"Wikimedia Commons, CC BY-SA 2.0, geograph 4274124, Scotch Rock Farm"
-stable_rock_007.jpg,train,stable,natural_bedrock,high,commons_ccby,commons_mundaringweir,"Wikimedia Commons, CC BY 2.5 AU, Mundaring Weir"
-stable_engineered_001.jpg,train,stable,riprap,high,commons_cc0,commons_riprap_shasta1,"Wikimedia Commons, CC0, riprap slope, Shasta-Trinity National Forest"
-stable_engineered_002.jpg,train,stable,riprap,high,commons_cc0,commons_riprap_shasta2,"Wikimedia Commons, CC0, riprap slope, Shasta-Trinity National Forest"
-stable_engineered_003.jpg,train,stable,gabion,high,commons_ccbysa,commons_geograph8090095,"Wikimedia Commons, CC BY-SA 2.0, geograph 8090095, gabion retaining wall"
-stable_engineered_004.jpg,train,stable,gabion,high,commons_ccbysa,commons_geograph7571148,"Wikimedia Commons, CC BY-SA 2.0, geograph 7571148, gabion retaining wall"
-stable_engineered_005.jpg,train,stable,gabion,medium,commons_ccbysa,commons_a66,"Wikimedia Commons, CC BY-SA 2.0, gabion wall on A66; parked cars visible far in background on the road, not on the slope - review against no-vehicles preference"
+stable_slope_008.png,train,stable,engineered,high,field,,grassy urban slope near a building
+stable_slope_009.png,train,stable,vegetation,medium,unknown,,looks like a Street View screenshot - verify source/license before any publication
+stable_slope_010.png,train,stable,vegetation,medium,unknown,,looks like a Street View screenshot - verify source/license before any publication
+stable_slope_011.png,train,stable,vegetation,medium,unknown,,looks like a Street View screenshot - verify source/license before any publication
+stable_slope_012.png,train,stable,vegetation,medium,unknown,,looks like a Street View screenshot - verify source/license before any publication
+stable_slope_013.png,train,stable,bedrock,high,field,,fractured roadcut with yucca; no movement evidence
+stable_slope_015.png,train,stable,bedrock,high,field,,weathered fractured bedrock roadcut
+stable_slope_014.png,train,stable,vegetation,high,field,,"yucca/dry chaparral hillside, natural"
+stable_rock_004.jpg,train,stable,bedrock,high,commons_ccbysa,commons_rockhousefell,"Wikimedia Commons, CC BY-SA 2.0, geograph 4345724, Rock outcrop on Rock House Fell"
+stable_rock_005.jpg,train,stable,bedrock,high,commons_ccbysa,commons_geograph8331979,"Wikimedia Commons, CC BY-SA 2.0, geograph 8331979"
+stable_rock_006.jpg,train,stable,bedrock,high,commons_ccbysa,commons_scotchrockfarm,"Wikimedia Commons, CC BY-SA 2.0, geograph 4274124, Scotch Rock Farm"
+stable_rock_007.jpg,train,stable,bedrock,high,commons_ccby,commons_mundaringweir,"Wikimedia Commons, CC BY 2.5 AU, Mundaring Weir"
+stable_engineered_001.jpg,train,stable,engineered,high,commons_cc0,commons_riprap_shasta1,"Wikimedia Commons, CC0, riprap slope, Shasta-Trinity National Forest"
+stable_engineered_002.jpg,train,stable,engineered,high,commons_cc0,commons_riprap_shasta2,"Wikimedia Commons, CC0, riprap slope, Shasta-Trinity National Forest"
+stable_engineered_003.jpg,train,stable,engineered,high,commons_ccbysa,commons_geograph8090095,"Wikimedia Commons, CC BY-SA 2.0, geograph 8090095, gabion retaining wall"
+stable_engineered_004.jpg,train,stable,engineered,high,commons_ccbysa,commons_geograph7571148,"Wikimedia Commons, CC BY-SA 2.0, geograph 7571148, gabion retaining wall"
+stable_engineered_005.jpg,train,stable,engineered,medium,commons_ccbysa,commons_a66,"Wikimedia Commons, CC BY-SA 2.0, gabion wall on A66; parked cars visible far in background on the road, not on the slope - review against no-vehicles preference"
 unstable_cliff_001.png,train,unstable,erosion,high,unknown,,vertical erosion channels across roadcut; Google watermark visible in frame - verify source/license before any publication
 unstable_cliff_002.png,train,unstable,scarp,medium,field,,"small slump/scarp with exposed soil, moderate scale"
 unstable_cliff_003.png,train,unstable,erosion,high,field,,disturbed/eroded soil roadcut; traffic cones present
 unstable_cliff_004.png,train,unstable,debris,high,field,,debris/rockfall pile at base of failed slope
-stable_rock_010.png,train,stable,natural_bedrock,high,field,,"reclassified from unstable_cliff_005 per user review; consolidated fractured rock roadcut, no fresh scarp/debris/crack evidence"
-unstable_cliff_006.png,train,unstable,erosion,high,unknown,,active erosion scar with loose material; Google watermark visible in frame - verify source/license before any publication
-stable_rock_011.png,train,stable,natural_bedrock,high,field,,"reclassified from unstable_cliff_007 per user review; consolidated rock roadcut, diagonal line judged to be a shadow, not a crack"
-unstable_cliff_009.png,train,unstable,undercut,high,field,,undercut erosion bench with succulent groundcover
+stable_rock_010.png,train,stable,bedrock,high,field,roadcut_socal_1,"reclassified from unstable_cliff_005 per user review; consolidated fractured rock roadcut, no fresh scarp/debris/crack evidence"
+unstable_cliff_006.png,train,unstable,erosion,high,unknown,roadcut_socal_1,active erosion scar with loose material; Google watermark visible in frame - verify source/license before any publication
+stable_rock_011.png,train,stable,bedrock,high,field,roadcut_socal_1,"reclassified from unstable_cliff_007 per user review; consolidated rock roadcut, diagonal line judged to be a shadow, not a crack"
+unstable_cliff_009.png,train,unstable,erosion,high,field,,undercut erosion bench with succulent groundcover
 unstable_cliff_010.png,train,unstable,erosion,high,field,,parallel erosion rills/gullies cut into soil face
-unstable_cliff_011.jpg,train,unstable,undercut,high,field,,coastal cliff undercutting with seep staining
-stable_rock_012.png,train,stable,natural_bedrock,high,field,,"reclassified from unstable_cliff_014 per user review; pale consolidated soil/rock roadcut, no failure evidence"
-unstable_cliff_015.png,train,unstable,debris,medium,field,,fractured rock with modest debris accumulation at base
-unstable_cliff_016.png,train,unstable,debris,high,field,,large debris/talus accumulation at base of fractured outcrop
+unstable_cliff_011.jpg,train,unstable,erosion,high,field,,coastal cliff undercutting with seep staining
+stable_rock_012.png,train,stable,bedrock,high,field,,"reclassified from unstable_cliff_014 per user review; pale consolidated soil/rock roadcut, no failure evidence"
+unstable_cliff_015.png,train,unstable,debris,medium,field,roadcut_socal_1,fractured rock with modest debris accumulation at base
+unstable_cliff_016.png,train,unstable,debris,high,field,roadcut_socal_1,large debris/talus accumulation at base of fractured outcrop
 unstable_cliff_017.png,train,unstable,debris,medium,field,,fractured rock roadcut with rubble pile at base
-unstable_crack_001.jpg,train,unstable,tension_crack,high,field,,textbook parallel tension cracks in turf above houses
-unstable_crack_004.jpeg,train,unstable,tension_crack,high,field,,"large tension/slump crack in residential yard; vehicles visible in background driveway (incidental, not on slope)"
-unstable_crack_005.jpeg,train,unstable,tension_crack,medium,field,,"image is sideways/rotated and dense leaf litter obscures most of the frame, but a rock crack is visible upper-left - kept per user confirmation; consider re-cropping/rotating for clarity"
-unstable_crack_006.jpeg,train,unstable,tension_crack,high,field,,slump/crack in lawn adjacent to residential deck
+unstable_crack_001.jpg,train,unstable,crack,high,field,,textbook parallel tension cracks in turf above houses
+unstable_crack_004.jpeg,train,unstable,crack,high,field,,"large tension/slump crack in residential yard; vehicles visible in background driveway (incidental, not on slope)"
+unstable_crack_005.jpeg,train,unstable,crack,medium,field,,"image is sideways/rotated and dense leaf litter obscures most of the frame, but a rock crack is visible upper-left - kept per user confirmation; consider re-cropping/rotating for clarity"
+unstable_crack_006.jpeg,train,unstable,crack,high,field,,slump/crack in lawn adjacent to residential deck
 unstable_crack_007.jpg,train,unstable,erosion,high,field,,erosion/crack channels in grass highway embankment
-unstable_crack_008.jpg,train,unstable,tension_crack,high,field,,"Arctic coastal permafrost tension crack, person for scale - unusual geographic/climate context vs typical target use case"
-stable_rock_013.jpg,train,stable,natural_bedrock,high,field,,"reclassified from unstable_debris_001 per user review; Bryce Canyon hoodoo rock formation, natural and intact, no debris/failure evidence"
+unstable_crack_008.jpg,train,unstable,crack,high,field,,"Arctic coastal permafrost tension crack, person for scale - unusual geographic/climate context vs typical target use case"
+stable_rock_013.jpg,train,stable,bedrock,high,field,,"reclassified from unstable_debris_001 per user review; Bryce Canyon hoodoo rock formation, natural and intact, no debris/failure evidence"
 unstable_debris_002.png,train,unstable,debris,medium,field,,small gravel/rock mound roadside - ambiguous whether natural talus or fill material
-unstable_landslide_001.jpg,train,unstable,landslide_severe,high,field,,large catastrophic landslide scar behind houses (severe-failure category)
-unstable_landslide_003.png,train,unstable,landslide_severe,high,field,,active landslide with road collapse (severe-failure category)
+unstable_landslide_001.jpg,train,unstable,displacement,high,field,,large catastrophic landslide scar behind houses (severe-failure category)
+unstable_landslide_003.png,train,unstable,displacement,high,field,,active landslide with road collapse (severe-failure category)
 unstable_landslide_004.png,train,unstable,scarp,high,field,,"fresh scarp with remediation tarp/materials nearby, moderate scale"
-unstable_rockfall_001.png,train,unstable,rockfall,high,field,,fresh white rockfall talus at base of chalk cliff
-unstable_rockfall_002.jpg,train,unstable,rockfall,medium,field,,modest rockfall debris scattered on trail/road
-unstable_vegetation_001.jpg,train,unstable,ambiguous,low,field,,"small bare/reddish soil patch on otherwise vegetated hillside - subtle, recommend mentor review"
+unstable_rockfall_001.png,train,unstable,debris,high,field,,fresh white rockfall talus at base of chalk cliff
+unstable_rockfall_002.jpg,train,unstable,debris,medium,field,,modest rockfall debris scattered on trail/road
+unstable_vegetation_001.jpg,train,unstable,displacement,low,field,,"small bare/reddish soil patch on otherwise vegetated hillside - subtle, recommend mentor review"
 unstable_erosion_001.jpg,train,unstable,erosion,medium,commons_cc0,commons_nigeria_erosion,"Wikimedia Commons, CC0, gully erosion, Irawo, Nigeria; vegetation partly obscures the feature"
-stable_cliff_002.jpg,val,stable,natural_bedrock,high,field,,"Bryce Canyon hoodoo cliff, wide view, intact"
-stable_cliff_006.png,val,stable,natural_bedrock,medium,unknown,,"mossy roadcut bedrock; small watermark box visible in image, source unclear"
-stable_cliff_007.png,val,stable,natural_bedrock,high,field,,"fractured sandstone with pines, natural"
-stable_rock_001.jpg,val,stable,natural_bedrock,high,field,,Vasquez Rocks-style sandstone with hikers visible for scale
-stable_slope_001.jpg,val,stable,engineered_vegetated,high,field,,grass embankment with gabion steps and concrete wall along highway
-stable_slope_004.jpg,val,stable,engineered_vegetated,high,field,,dense groundcover/vine engineered slope with railing
-stable_dry_001.jpg,val,stable,dry_vegetation,high,commons_cc0,commons_desertslope,"Wikimedia Commons, CC0, Desert Slope With Bushes"
-stable_dry_002.jpg,val,stable,dry_vegetation,high,commons_cc0,commons_wildomar2,"Wikimedia Commons, CC0, CA coastal sage scrub/chaparral, Wildomar"
-stable_dry_003.jpg,val,stable,dry_vegetation,high,commons_cc0,commons_wildomar4,"Wikimedia Commons, CC0, CA coastal sage scrub/chaparral, Wildomar"
+stable_cliff_002.jpg,val,stable,bedrock,high,field,,"Bryce Canyon hoodoo cliff, wide view, intact"
+stable_cliff_006.png,val,stable,bedrock,medium,unknown,,"mossy roadcut bedrock; small watermark box visible in image, source unclear"
+stable_cliff_007.png,val,stable,bedrock,high,field,,"fractured sandstone with pines, natural"
+stable_rock_001.jpg,val,stable,bedrock,high,field,,Vasquez Rocks-style sandstone with hikers visible for scale
+stable_slope_001.jpg,val,stable,engineered,high,field,,grass embankment with gabion steps and concrete wall along highway
+stable_slope_004.jpg,val,stable,engineered,high,field,,dense groundcover/vine engineered slope with railing
+stable_dry_001.jpg,val,stable,vegetation,high,commons_cc0,commons_desertslope,"Wikimedia Commons, CC0, Desert Slope With Bushes"
+stable_dry_002.jpg,val,stable,vegetation,high,commons_cc0,commons_wildomar2,"Wikimedia Commons, CC0, CA coastal sage scrub/chaparral, Wildomar"
+stable_dry_003.jpg,val,stable,vegetation,high,commons_cc0,commons_wildomar2,"Wikimedia Commons, CC0, CA coastal sage scrub/chaparral, Wildomar"
 unstable_cliff_008.png,val,unstable,erosion,high,field,,loose disturbed roadside soil/rock cut
-unstable_cliff_012.jpg,val,unstable,undercut,high,field,,dramatic coastal cliff undercutting; houses/fence visible at top edge (background)
+unstable_cliff_012.jpg,val,unstable,erosion,high,field,,dramatic coastal cliff undercutting; houses/fence visible at top edge (background)
 unstable_cliff_013.jpg,val,unstable,scarp,high,field,,active landslide scarp with workers inspecting; cracked retaining wall at base
-unstable_crack_002.jpg,val,unstable,tension_crack,high,field,,ground crack through rock/grass pasture; cow present (incidental)
-unstable_crack_003.jpeg,val,unstable,tension_crack,low,field,,"very close-up on a paved/graded slope crack, minimal surrounding slope context visible - kept as a crack-indicator example per user judgment call, but flagged low-confidence for composition"
+unstable_crack_003.jpeg,val,unstable,crack,low,field,,"very close-up on a paved/graded slope crack, minimal surrounding slope context visible - kept as a crack-indicator example per user judgment call, but flagged low-confidence for composition"
 unstable_crack_010.jpeg,val,unstable,scarp,high,field,,fresh scarp cutting through grassy hillside above river/ravine
 unstable_erosion_002.jpg,val,unstable,erosion,high,commons_ccbysa,commons_highpike,"Wikimedia Commons, CC BY-SA 2.0, geograph 4387548, Erosion Gully, High Pike"
-unstable_crack_011.jpg,val,unstable,tension_crack,high,commons_ccbysa,commons_geograph1705880,"Wikimedia Commons, CC BY-SA 2.0, geograph 1705880, Tension cracks; cow visible (incidental)"
-stable_cut_001.jpg,train,stable,cut_embankment,high,commons_ccbysa,commons_geograph6573009,"Wikimedia Commons, CC BY-SA 2.0, geograph 6573009, graded trail cut into hillside"
-stable_cut_002.jpg,train,stable,cut_embankment,high,commons_ccbysa,commons_geograph7739256,"Wikimedia Commons, CC BY-SA 2.0, geograph 7739256, sunken holloway path between mossy stone walls, long-established/stable"
+unstable_crack_011.jpg,val,unstable,crack,high,commons_ccbysa,commons_geograph1705880,"Wikimedia Commons, CC BY-SA 2.0, geograph 1705880, Tension cracks; cow visible (incidental)"
+stable_cut_001.jpg,train,stable,engineered,high,commons_ccbysa,commons_geograph6573009,"Wikimedia Commons, CC BY-SA 2.0, geograph 6573009, graded trail cut into hillside"
+stable_cut_002.jpg,train,stable,engineered,high,commons_ccbysa,commons_geograph7739256,"Wikimedia Commons, CC BY-SA 2.0, geograph 7739256, sunken holloway path between mossy stone walls, long-established/stable"
 unstable_erosion_003.jpg,train,unstable,erosion,high,commons_ccbysa,commons_geograph3509055,"Wikimedia Commons, CC BY-SA 2.0, geograph 3509055, undercut sea cliff with fresh scarp/crack faces"
 unstable_erosion_004.jpg,train,unstable,erosion,medium,commons_ccbysa,commons_geograph6404340,"Wikimedia Commons, CC BY-SA 2.0, geograph 6404340, eroding red sandstone coastal cliff above riprap toe protection"
 unstable_erosion_005.jpg,train,unstable,erosion,medium,commons_ccbysa,commons_geograph4944988,"Wikimedia Commons, CC BY-SA 2.0, geograph 4944988, dark peaty scarp, partly snow-covered"
@@ -92,22 +90,22 @@ unstable_scarp_001.jpg,val,unstable,scarp,high,commons_ccbysa,commons_geograph62
 unstable_erosion_009.jpg,val,unstable,erosion,high,commons_ccbysa,commons_geograph2544473,"Wikimedia Commons, CC BY-SA 2.0, geograph 2544473, exposed layered soil riverbank with undercut tree roots"
 unstable_scarp_003.jpg,val,unstable,scarp,high,commons_ccbysa,commons_geograph3112203,"Wikimedia Commons, CC BY-SA 2.0, geograph 3112203, dramatic fresh cliff slump above Titchberry Water"
 unstable_debris_006.jpg,val,unstable,debris,high,commons_ccbysa,commons_geograph6614017,"Wikimedia Commons, CC BY-SA 2.0, geograph 6614017, scree slope path, Eglwyseg Rocks"
-stable_rock_008.jpg,train,stable,natural_bedrock,medium,commons_ccbysa,commons_geograph7259960,"Wikimedia Commons, CC BY-SA 2.0, geograph 7259960, limestone outcrop with drystone wall, roadside"
-stable_engineered_006.jpg,train,stable,cut_embankment,high,commons_ccbysa,commons_geograph8327786,"Wikimedia Commons, CC BY-SA 2.0, geograph 8327786, dry-stone-faced road embankment cut into hillside"
-stable_rock_009.jpg,train,stable,natural_bedrock,medium,commons_ccbysa,commons_geograph6330261,"Wikimedia Commons, CC BY-SA 2.0, geograph 6330261, wet rock-faced roadcut; slight motion blur from moving vehicle"
-stable_slope_016.jpg,train,stable,engineered_vegetated,medium,commons_ccbysa,commons_geograph8095305,"Wikimedia Commons, CC BY-SA 2.0, geograph 8095305, vegetated urban embankment slope near path/house"
-stable_dry_004.jpg,train,stable,dry_vegetation,medium,field,user_site_01,"matted dead/cut grass on slope, small holes consistent with animal burrows, small soil mound (likely burrow spoil) - no cracks/scarps visible"
-stable_slope_017.jpg,train,stable,engineered_vegetated,high,field,user_site_01,"dense continuous shrub cover on slope below a residential structure, no visible ground disturbance"
-stable_dry_005.jpg,train,stable,dry_vegetation,high,field,user_site_01,"recently cleared/cut dry slope, cut tree stump visible, sparse shrub regrowth, no instability signs"
-stable_rock_014.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_geograph7525952,"Wikimedia Commons, CC BY-SA 2.0, geograph 7525952, dark fractured rock roadcut"
-stable_engineered_007.jpg,train,stable,riprap,high,commons_ccbysa,commons_geograph6583312,"Wikimedia Commons, CC BY-SA 2.0, geograph 6583312, rock armor/riprap slope protection along railway cutting"
-stable_slope_019.jpg,train,stable,engineered_vegetated,medium,commons_ccbysa,commons_geograph7510059,"Wikimedia Commons, CC BY-SA 2.0, geograph 7510059, grassy road-cutting slope, M4"
+stable_rock_008.jpg,train,stable,bedrock,medium,commons_ccbysa,commons_geograph7259960,"Wikimedia Commons, CC BY-SA 2.0, geograph 7259960, limestone outcrop with drystone wall, roadside"
+stable_engineered_006.jpg,train,stable,engineered,high,commons_ccbysa,commons_geograph8327786,"Wikimedia Commons, CC BY-SA 2.0, geograph 8327786, dry-stone-faced road embankment cut into hillside"
+stable_rock_009.jpg,train,stable,bedrock,medium,commons_ccbysa,commons_geograph6330261,"Wikimedia Commons, CC BY-SA 2.0, geograph 6330261, wet rock-faced roadcut; slight motion blur from moving vehicle"
+stable_slope_016.jpg,train,stable,engineered,medium,commons_ccbysa,commons_geograph8095305,"Wikimedia Commons, CC BY-SA 2.0, geograph 8095305, vegetated urban embankment slope near path/house"
+stable_dry_004.jpg,train,stable,vegetation,medium,field,user_site_01,"matted dead/cut grass on slope, small holes consistent with animal burrows, small soil mound (likely burrow spoil) - no cracks/scarps visible"
+stable_slope_017.jpg,train,stable,engineered,high,field,user_site_01,"dense continuous shrub cover on slope below a residential structure, no visible ground disturbance"
+stable_dry_005.jpg,train,stable,vegetation,high,field,user_site_01,"recently cleared/cut dry slope, cut tree stump visible, sparse shrub regrowth, no instability signs"
+stable_rock_014.jpg,train,stable,bedrock,high,commons_ccbysa,commons_geograph7525952,"Wikimedia Commons, CC BY-SA 2.0, geograph 7525952, dark fractured rock roadcut"
+stable_engineered_007.jpg,train,stable,engineered,high,commons_ccbysa,commons_geograph6583312,"Wikimedia Commons, CC BY-SA 2.0, geograph 6583312, rock armor/riprap slope protection along railway cutting"
+stable_slope_019.jpg,train,stable,engineered,medium,commons_ccbysa,commons_geograph7510059,"Wikimedia Commons, CC BY-SA 2.0, geograph 7510059, grassy road-cutting slope, M4"
 stable_engineered_008.jpg,train,stable,engineered,medium,commons_ccbysa,commons_geograph4203596,"Wikimedia Commons, CC BY-SA 2.0, geograph 4203596, re-graded crushed-rock cutting slope; slight motion blur from moving vehicle"
 stable_engineered_010.jpg,train,stable,engineered,high,commons_ccbysa,commons_geograph4849065,"Wikimedia Commons, CC BY-SA 2.0, geograph 4849065, turf reinforcement matting on rail cutting slope"
 stable_engineered_011.jpg,train,stable,engineered,medium,commons_ccbysa,commons_geograph8017289,"Wikimedia Commons, CC BY-SA 2.0, geograph 8017289, wire-mesh rockfall netting over fractured rock, railway cutting; one of a same-site photo series (4 near-duplicates skipped for leakage)"
 stable_engineered_009.jpg,val,stable,engineered,medium,commons_ccbysa,commons_geograph4954950,"Wikimedia Commons, CC BY-SA 2.0, geograph 4954950, wire-mesh rockfall netting over visibly fractured rock, cutting at Higher Runcorn - ambiguous: netting suggests the rock was assessed as rockfall-prone before mitigation was installed"
-stable_rock_017.jpg,val,stable,natural_bedrock,high,commons_ccbysa,commons_geograph8046979,"Wikimedia Commons, CC BY-SA 2.0, geograph 8046979, chalk cliff face, person visible for scale (incidental)"
-stable_rock_018.jpg,val,stable,natural_bedrock,high,commons_ccbysa,commons_geograph8058058,"Wikimedia Commons, CC BY-SA 2.0, geograph 8058058, chalk cliff above a concrete toe/promenade wall"
+stable_rock_017.jpg,val,stable,bedrock,high,commons_ccbysa,commons_geograph8046979,"Wikimedia Commons, CC BY-SA 2.0, geograph 8046979, chalk cliff face, person visible for scale (incidental)"
+stable_rock_018.jpg,val,stable,bedrock,high,commons_ccbysa,commons_geograph8058058,"Wikimedia Commons, CC BY-SA 2.0, geograph 8058058, chalk cliff above a concrete toe/promenade wall"
 unstable_scarp_007.jpg,train,unstable,scarp,high,commons_ccbysa,commons_geograph3535422,"Wikimedia Commons, CC BY-SA 2.0, geograph 3535422, active mudslide with fresh scarp/lobe, West Cliff"
 unstable_scarp_008.jpg,train,unstable,scarp,high,commons_ccbysa,commons_geograph3718876,"Wikimedia Commons, CC BY-SA 2.0, geograph 3718876, fresh mudslide lobe, Upgang beach"
 unstable_scarp_009.jpg,train,unstable,scarp,high,commons_ccbysa,commons_geograph3913829,"Wikimedia Commons, CC BY-SA 2.0, geograph 3913829, mudslide reaching beach above rock-armor toe protection, Warden Sheppey"
@@ -115,34 +113,68 @@ unstable_scarp_010.jpg,train,unstable,scarp,high,commons_ccbysa,commons_geograph
 unstable_erosion_011.jpg,val,unstable,erosion,medium,commons_ccbysa,commons_geograph1910272,"Wikimedia Commons, CC BY-SA 2.0, geograph 1910272, eroded/slumped cliff edge, Gristhorpe Cliff; people visible distant for scale (incidental)"
 unstable_erosion_012.jpg,train,unstable,erosion,high,commons_ccbysa,commons_happisburgh,"Wikimedia Commons, CC BY-SA 2.0, active coastal erosion undercutting cliff edge near houses, Happisburgh, Norfolk"
 unstable_erosion_013.jpg,val,unstable,erosion,high,commons_ccbysa,commons_hunstanton,"Wikimedia Commons, CC BY-SA 2.0, layered eroding cliff with collapsed rock at base, Hunstanton"
-stable_rock_019.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_geograph3141065,"Wikimedia Commons, CC BY-SA 2.0, geograph 3141065, smooth rounded granite outcrop, minimal fracturing"
-stable_rock_020.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_geograph7198826,"Wikimedia Commons, CC BY-SA 2.0, geograph 7198826, smooth weathered granite dome/tor, intact surface"
-stable_rock_021.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_geograph6977120,"Wikimedia Commons, CC BY-SA 2.0, geograph 6977120, smooth rounded granite tor boulders"
-stable_rock_022.jpg,val,stable,natural_bedrock,medium,commons_ccbysa,commons_geograph6988607,"Wikimedia Commons, CC BY-SA 2.0, geograph 6988607, rocky outcrop on grassy hillside, some fracturing but mostly smooth"
+stable_rock_019.jpg,train,stable,bedrock,high,commons_ccbysa,commons_geograph3141065,"Wikimedia Commons, CC BY-SA 2.0, geograph 3141065, smooth rounded granite outcrop, minimal fracturing"
+stable_rock_020.jpg,train,stable,bedrock,high,commons_ccbysa,commons_geograph7198826,"Wikimedia Commons, CC BY-SA 2.0, geograph 7198826, smooth weathered granite dome/tor, intact surface"
+stable_rock_021.jpg,train,stable,bedrock,high,commons_ccbysa,commons_geograph6977120,"Wikimedia Commons, CC BY-SA 2.0, geograph 6977120, smooth rounded granite tor boulders"
+stable_rock_022.jpg,val,stable,bedrock,medium,commons_ccbysa,commons_geograph6988607,"Wikimedia Commons, CC BY-SA 2.0, geograph 6988607, rocky outcrop on grassy hillside, some fracturing but mostly smooth"
 unstable_erosion_014.jpg,train,unstable,erosion,high,commons_ccbysa,commons_kinrara,"Wikimedia Commons, CC BY-SA 2.0, eroded riverbank with exposed roots and fallen trees, Kinrara"
 unstable_erosion_015.jpg,train,unstable,erosion,high,commons_ccbysa,commons_geograph3908399,"Wikimedia Commons, CC BY-SA 2.0, geograph 3908399, undercut riverbank in park; fence visible (static, incidental)"
 unstable_erosion_016.jpg,train,unstable,erosion,high,commons_ccbysa,commons_geograph6779634,"Wikimedia Commons, CC BY-SA 2.0, geograph 6779634, close undercut riverbank with visible crack/void, River Teign"
-unstable_rockfall_004.jpg,train,unstable,rockfall,high,commons_ccbysa,commons_geograph7730141,"Wikimedia Commons, CC BY-SA 2.0, geograph 7730141, rockfall debris/scree fan at base of rock face, valley view"
-unstable_rockfall_005.jpg,train,unstable,rockfall,high,commons_cc0,commons_supaitunnel,"Wikimedia Commons, CC0/PD, rockfall debris across trail, Supai Tunnel, Grand Canyon"
+unstable_rockfall_004.jpg,train,unstable,debris,high,commons_ccbysa,commons_geograph7730141,"Wikimedia Commons, CC BY-SA 2.0, geograph 7730141, rockfall debris/scree fan at base of rock face, valley view"
+unstable_rockfall_005.jpg,train,unstable,debris,high,commons_cc0,commons_supaitunnel,"Wikimedia Commons, CC0/PD, rockfall debris across trail, Supai Tunnel, Grand Canyon"
 unstable_erosion_017.jpg,val,unstable,erosion,high,commons_ccbysa,commons_douglasburn,"Wikimedia Commons, CC BY-SA 2.0, channelized erosion gully cutting through hillside, Douglas Burn; sheep visible (incidental)"
-unstable_rockfall_006.jpg,val,unstable,rockfall,high,commons_cc0,commons_kaibabtrail,"Wikimedia Commons, CC0/PD, rockfall debris across trail, North Kaibab Trail, Grand Canyon; hiker visible distant (incidental)"
-stable_rock_024.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_geograph3219464,"Wikimedia Commons, CC BY-SA 2.0, geograph 3219464, fractured sandstone roadcut, no movement evidence"
-stable_rock_027.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_geograph3010950,"Wikimedia Commons, CC BY-SA 2.0, geograph 3010950, layered red sandstone with visible cross-bedding, static wire fence in frame"
+unstable_rockfall_006.jpg,val,unstable,debris,high,commons_cc0,commons_kaibabtrail,"Wikimedia Commons, CC0/PD, rockfall debris across trail, North Kaibab Trail, Grand Canyon; hiker visible distant (incidental)"
+stable_rock_024.jpg,train,stable,bedrock,high,commons_ccbysa,commons_geograph3219464,"Wikimedia Commons, CC BY-SA 2.0, geograph 3219464, fractured sandstone roadcut, no movement evidence"
+stable_rock_027.jpg,train,stable,bedrock,high,commons_ccbysa,commons_geograph3010950,"Wikimedia Commons, CC BY-SA 2.0, geograph 3010950, layered red sandstone with visible cross-bedding, static wire fence in frame"
 unstable_scarp_011.jpg,train,unstable,scarp,high,commons_ccbysa,commons_geograph7541229,"Wikimedia Commons, CC BY-SA 2.0, geograph 7541229, clear fresh grey landslide scar on grassy hillside"
 unstable_scarp_014.jpg,train,unstable,scarp,high,commons_ccbysa,commons_geograph1346913,"Wikimedia Commons, CC BY-SA 2.0, geograph 1346913, small red soil slump/crack at coastal cliff edge"
 unstable_erosion_019.jpg,val,unstable,erosion,high,commons_ccbysa,commons_geograph1184625,"Wikimedia Commons, CC BY-SA 2.0, geograph 1184625, eroded/slumped layered bank along coastal path; people visible distant (incidental)"
 unstable_debris_009.jpg,val,unstable,debris,high,commons_ccbysa,commons_geograph1329521,"Wikimedia Commons, CC BY-SA 2.0, geograph 1329521, rocky debris/scree chute down hillside"
-stable_engineered_012.jpg,train,stable,engineered_gabion,high,commons_ccbysa,commons_gabion1,"Wikimedia Commons, CC BY-SA 2.5, gabion retaining wall on grass slope"
-stable_engineered_013.jpg,val,stable,engineered_gabion,high,commons_ccbysa,commons_durlstonbay,"Wikimedia Commons, CC BY-SA 2.0, geograph 1556750, gabion wall cliff reinforcement Durlston Bay"
-unstable_debris_010.jpg,train,unstable,debris_flow,high,commons_ccbysa,commons_cwmystwyth,"Wikimedia Commons, CC BY-SA 2.0, geograph 959420, mudslide in Cwm Ystwyth next to road"
-unstable_erosion_020.jpg,train,unstable,coastal_erosion,high,commons_ccbysa,commons_portrush,"Wikimedia Commons, CC BY-SA 2.0, geograph 1115500, cliff face White Rocks Portrush"
-unstable_erosion_021.jpg,train,unstable,coastal_erosion,high,commons_ccbysa,commons_hinkleypoint,"Wikimedia Commons, CC BY-SA 2.0, geograph 3560592, eroded cliff face near Hinkley Point"
-unstable_erosion_022.jpg,train,unstable,coastal_erosion,high,commons_ccbysa,commons_covehithe,"Wikimedia Commons, CC BY-SA 2.0, geograph 2137500, eroding cliff face at Covehithe"
-unstable_erosion_023.jpg,val,unstable,coastal_erosion,high,commons_ccbysa,commons_kessingland,"Wikimedia Commons, CC BY-SA 2.0, geograph 2137706, exposed layers in eroding cliff face Kessingland"
-unstable_erosion_024.jpg,train,unstable,coastal_erosion,high,commons_ccbysa,commons_lilstock,"Wikimedia Commons, CC BY-SA 2.0, geograph 3499909, eroded cliff face Lilstock"
-unstable_erosion_025.jpg,train,unstable,coastal_erosion,high,commons_ccbysa,commons_trimingham,"Wikimedia Commons, CC BY-SA 2.0, geograph 2965342, eroding cliff face at Trimingham"
-stable_rock_032.jpg,train,stable,natural_bedrock,high,commons_ccbysa,commons_silurianoutcrops,"Wikimedia Commons, CC BY-SA 2.0, geograph 1049409, Silurian rock outcrop on grassy hillside"
-stable_cut_003.jpg,train,stable,engineered_roadcut,high,commons_ccbysa,commons_devilsslidetrail,"Wikimedia Commons, CC BY-SA, Devil's Slide Trail old CA-1 section south of Pacifica; hard negative - rough fractured roadcut with no failure evidence, model scored 0.71 unstable pre-add"
-stable_cut_004.jpg,train,stable,engineered_roadcut,high,commons_ccbysa,commons_devinehill,"Wikimedia Commons, CC BY-SA 3.0, Devine Hill road cutting; intact fractured sandstone face, no failure evidence"
-stable_cut_005.jpg,train,stable,engineered_roadcut,high,commons_ccby,commons_ramtek,"Wikimedia Commons, CC BY 3.0, ghat road cut to Ram Mandir Ramtek; intact rock cut face, photographer watermark bottom-right"
-stable_cut_006.jpg,val,stable,engineered_roadcut,high,commons_cc0,commons_langenwald,"Wikimedia Commons, CC0, Molasse exposure roadcut near Langenwald"
+stable_engineered_012.jpg,train,stable,engineered,high,commons_ccbysa,commons_gabion1,"Wikimedia Commons, CC BY-SA 2.5, gabion retaining wall on grass slope"
+stable_engineered_013.jpg,val,stable,engineered,high,commons_ccbysa,commons_durlstonbay,"Wikimedia Commons, CC BY-SA 2.0, geograph 1556750, gabion wall cliff reinforcement Durlston Bay"
+unstable_debris_010.jpg,train,unstable,debris,high,commons_ccbysa,commons_cwmystwyth,"Wikimedia Commons, CC BY-SA 2.0, geograph 959420, mudslide in Cwm Ystwyth next to road"
+unstable_erosion_020.jpg,train,unstable,erosion,high,commons_ccbysa,commons_portrush,"Wikimedia Commons, CC BY-SA 2.0, geograph 1115500, cliff face White Rocks Portrush"
+unstable_erosion_021.jpg,train,unstable,erosion,high,commons_ccbysa,commons_hinkleypoint,"Wikimedia Commons, CC BY-SA 2.0, geograph 3560592, eroded cliff face near Hinkley Point"
+unstable_erosion_022.jpg,train,unstable,erosion,high,commons_ccbysa,commons_covehithe,"Wikimedia Commons, CC BY-SA 2.0, geograph 2137500, eroding cliff face at Covehithe"
+unstable_erosion_023.jpg,val,unstable,erosion,high,commons_ccbysa,commons_kessingland,"Wikimedia Commons, CC BY-SA 2.0, geograph 2137706, exposed layers in eroding cliff face Kessingland"
+unstable_erosion_024.jpg,train,unstable,erosion,high,commons_ccbysa,commons_lilstock,"Wikimedia Commons, CC BY-SA 2.0, geograph 3499909, eroded cliff face Lilstock"
+unstable_erosion_025.jpg,train,unstable,erosion,high,commons_ccbysa,commons_trimingham,"Wikimedia Commons, CC BY-SA 2.0, geograph 2965342, eroding cliff face at Trimingham"
+stable_rock_032.jpg,train,stable,bedrock,high,commons_ccbysa,commons_silurianoutcrops,"Wikimedia Commons, CC BY-SA 2.0, geograph 1049409, Silurian rock outcrop on grassy hillside"
+stable_cut_003.jpg,train,stable,engineered,high,commons_ccbysa,commons_devilsslidetrail,"Wikimedia Commons, CC BY-SA, Devil's Slide Trail old CA-1 section south of Pacifica; hard negative - rough fractured roadcut with no failure evidence, model scored 0.71 unstable pre-add"
+stable_cut_004.jpg,train,stable,engineered,high,commons_ccbysa,commons_devinehill,"Wikimedia Commons, CC BY-SA 3.0, Devine Hill road cutting; intact fractured sandstone face, no failure evidence"
+stable_cut_005.jpg,train,stable,engineered,high,commons_ccby,commons_ramtek,"Wikimedia Commons, CC BY 3.0, ghat road cut to Ram Mandir Ramtek; intact rock cut face, photographer watermark bottom-right"
+stable_cut_006.jpg,val,stable,engineered,high,commons_cc0,commons_langenwald,"Wikimedia Commons, CC0, Molasse exposure roadcut near Langenwald"
+stable_cut_007.jpg,train,stable,engineered,high,commons_ccbysa,commons_calhwy1,"Wikimedia Commons, CC BY-SA 4.0, California Highway One 2015 005.jpg; California Highway One rock face"
+stable_rock_033.jpg,val,stable,bedrock,high,commons_ccbysa,commons_faulenbach,"Wikimedia Commons, CC BY-SA 4.0, Gleitschliffwand Bad Faulenbach.jpg; glacially polished rock wall (Gleitschliffwand), smooth intact rock"
+unstable_scarp_015.jpg,train,unstable,scarp,high,commons_ccbysa,commons_burgas,"Wikimedia Commons, CC BY-SA 3.0, Burgas, Bulgaria - panoramio (24).jpg; Burgas coastal slump, same site as unstable_scarp_016"
+unstable_scarp_016.jpg,train,unstable,scarp,high,commons_ccbysa,commons_burgas,"Wikimedia Commons, CC BY-SA 3.0, Burgas, Bulgaria - panoramio (25).jpg; Burgas coastal slump, same site as unstable_scarp_015"
+unstable_debris_011.jpg,train,unstable,debris,high,commons_ccbysa,commons_furlo,"Wikimedia Commons, CC BY-SA 3.0, Debris fan Furlo.JPG; debris fan at Furlo"
+unstable_rockfall_007.jpg,train,unstable,debris,high,commons_ccbysa,commons_tenerife,"Wikimedia Commons, CC BY-SA 4.0, At Tenerife 2022 326.jpg; rockfall debris on road, Tenerife"
+unstable_rockfall_008.jpg,train,unstable,debris,high,commons_ccbysa,commons_cadutamassi,"Wikimedia Commons, CC BY-SA 4.0, Caduta massi.png; fallen boulders (caduta massi)"
+unstable_rockfall_009.jpg,train,unstable,debris,high,commons_ccbysa,commons_jokulsa,"Wikimedia Commons, CC BY-SA 1.0, Islande Jökulsárgljúfur orgues 2.jpg; columnar basalt with talus accumulation, Iceland"
+unstable_rockfall_010.jpg,train,unstable,debris,high,commons_ccbysa,commons_johnstown,"Wikimedia Commons, CC BY-SA 3.0, Johnstown Rockfall 1.JPG; Johnstown rockfall on netted cut slope"
+unstable_creep_001.jpg,train,unstable,displacement,high,commons_ccby,commons_grandmesa,"Wikimedia Commons, CC BY 4.0, Grand mesa creep.jpg; soil creep, Grand Mesa"
+unstable_erosion_026.jpg,train,unstable,erosion,high,commons_ccby,csiro_warren,"Wikimedia Commons, CC BY 3.0, CSIRO ScienceImage 4434 Gully erosion in the Warren Catchment east of Adelaide in the Mount Lofty Ranges South Australia 1992.jpg; CSIRO gully erosion, Warren Catchment"
+unstable_erosion_027.jpg,train,unstable,erosion,high,commons_ccby,commons_panoramio_er,"Wikimedia Commons, CC BY 3.0, Erosion - panoramio.jpg; eroded gully bank, same site as unstable_erosion_028"
+unstable_erosion_028.jpg,train,unstable,erosion,high,commons_ccby,commons_panoramio_er,"Wikimedia Commons, CC BY 3.0, Erosion - panoramio (2).jpg; eroded gully bank, same site as unstable_erosion_027"
+unstable_scarp_017.jpg,val,unstable,scarp,high,commons_ccbysa,commons_throosevelt,"Wikimedia Commons, CC BY-SA 4.0, Cannonballs and slump Theodore Roosevelt NP north unit ND1.jpg; slump with concretions, Theodore Roosevelt NP"
+unstable_erosion_029.jpg,val,unstable,erosion,high,commons_ccbysa,commons_withernsea,"Wikimedia Commons, CC BY-SA 2.0, Coastal erosion south of Withernsea (geograph 6054927).jpg; coastal erosion south of Withernsea"
+unstable_erosion_030.jpg,val,unstable,erosion,high,commons_ccby,csiro_aldinga,"Wikimedia Commons, CC BY 3.0, CSIRO ScienceImage 4571 Gully erosion near Aldinga Beach south of Adelaide South Australia 1992.jpg; CSIRO gully erosion, Aldinga Beach"
+stable_cliff_008.jpg,train,stable,bedrock,high,commons_ccbysa,commons_gondrani,"Wikimedia Commons, CC BY-SA 4.0, Caves at Gondrani.jpg; inland cliff face with cave openings, no failure evidence"
+stable_cut_008.jpg,train,stable,engineered,high,commons_ccbysa,commons_wuppertal,"Wikimedia Commons, CC BY-SA 4.0, Wuppertal Kichhofstraße 2017 003.jpg; roadcut, no failure evidence; scored 0.51 unstable pre-add"
+stable_cut_009.jpg,train,stable,engineered,high,commons_ccbysa,commons_pinaculo,"Wikimedia Commons, CC BY-SA 4.0, Pináculo - 2018-02-19 - IMG 1067.jpg; roadcut, no failure evidence; scored 0.90 unstable pre-add"
+stable_cut_010.jpg,train,stable,engineered,high,commons_ccbysa,commons_bhutan_chelela,"Wikimedia Commons, CC BY-SA 4.0, Chelela to Paro road views during LGFC - Bhutan 2019 (82).jpg; roadcut, no failure evidence; scored 0.13 unstable pre-add"
+stable_cut_011.jpg,train,stable,engineered,high,commons_ccbysa,commons_kennford,"Wikimedia Commons, CC BY-SA 2.0, Cutting, Kennford - geograph.org.uk - 572479.jpg; roadcut, no failure evidence; scored 0.19 unstable pre-add"
+stable_cut_012.jpg,val,stable,engineered,high,commons_cc0,commons_hawaii_geodil,"Wikimedia Commons, CC0, Hawaii Trip (GeoDIL number - 2577).jpg; roadcut, no failure evidence; scored 0.29 unstable pre-add"
+stable_engineered_014.jpg,train,stable,engineered,high,unknown,ozgeos_shotcrete,"Oz Geos (ozgeos.com.au/service/slope-stability-assessment/), license unknown; shotcrete-faced cut slope; vehicles in frame (deviation from no-vehicles rule, approved by user); scored 0.01 unstable pre-add"
+unstable_engineered_001.jpg,train,unstable,displacement,high,commons_ccbysa,commons_gospel_lane,"Wikimedia Commons, CC BY-SA 2.0, Collapsed retaining wall, Gospel Lane, Leadenham - geograph.org.uk - 7683503.jpg; collapsed masonry retaining wall, rubble spilled onto lane"
+unstable_engineered_002.jpg,train,unstable,displacement,high,commons_ccbysa,commons_macclesfield,"Wikimedia Commons, CC BY-SA 2.0, Collapsed retaining wall, Macclesfield Canal - geograph.org.uk - 751013.jpg; canal retaining wall failure with debris fan down the bank"
+unstable_engineered_003.jpg,train,unstable,displacement,high,commons_cc0,commons_chieti,"Wikimedia Commons, CC0, Failure of retaining wall (Chieti Scalo).jpg; failed retaining wall beside road, barriers across slope"
+unstable_engineered_004.jpg,train,unstable,displacement,high,commons_ccbysa,commons_tottenham,"Wikimedia Commons, CC BY-SA 2.0, Collapsing Wall - near Tottenham Chances Club.jpg; collapsing wall with soil spill; urban setting, limited slope context"
+unstable_engineered_005.jpg,val,unstable,displacement,high,commons_ccby,commons_us101_florence,"Wikimedia Commons, CC BY 2.0, Slide on U.S. 101 (15458296314).png; US-101 slide, road edge subsided with guardrail displaced"
+unstable_creep_002.jpg,train,unstable,displacement,high,unknown,user_unstable_creep_002,pistol-butt beech trunks curving at base with exposed roots on steep slope
+unstable_creep_003.jpg,train,unstable,displacement,high,unknown,user_unstable_creep_003,"hummocky lobed grass bank above stream, shallow creep/slump surface"
+unstable_creep_004.jpg,train,unstable,displacement,high,unknown,user_unstable_creep_004,terracettes - parallel step ridges across grassy slope
+unstable_creep_005.jpg,train,unstable,displacement,high,unknown,user_unstable_creep_005,extensive terracettes covering full hillside face
+stable_slope_020.jpg,train,stable,engineered,high,unknown,user_turf_embankment,"vegetated turf embankment beside road, dense grass cover, no failure features; utility vehicle present on road (deviation from no-vehicles rule, approved by user); license unknown; scored 0.20 unstable pre-add"
+stable_cut_013.jpg,train,stable,engineered,high,commons_ccbysa,commons_frickley,"Wikimedia Commons, CC BY-SA 2.0, Rock face in railway cutting west of Frickley - geograph.org.uk - 4343779.jpg; railway rock cutting face, no failure evidence; scored 0.79 unstable pre-add"

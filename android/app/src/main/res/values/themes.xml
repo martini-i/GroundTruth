@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose paints the real UI; this only styles the window before the first
+         frame, so the launch does not flash white on a dark device. -->
+    <style name="Theme.GroundTruth" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/background_dark</item>
+    </style>
+</resources>

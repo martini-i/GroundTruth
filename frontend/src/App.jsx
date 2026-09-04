@@ -2,14 +2,26 @@ import { useState, useEffect } from "react";
 import ImageUpload from "./components/ImageUpload";
 import ConfidenceBars from "./components/ConfidenceBars";
 import AssessmentCard from "./components/AssessmentCard";
-import { predictImage, gradcamImage } from "./api";
+import HowItWorks from "./components/HowItWorks";
+import About from "./components/About";
+import { predictImage, croppedImage, fetchHealth } from "./api";
 import "./App.css";
 
 const EXAMPLES = [
-  { label: "Stable — natural rock", tone: "stable", path: "/examples/stable_cliff_001.jpg" },
-  { label: "Stable — engineered", tone: "stable", path: "/examples/stable_engineered_001.jpg" },
-  { label: "Unstable — crack", tone: "unstable", path: "/examples/unstable_crack_001.jpg" },
-  { label: "Unstable — scarp", tone: "unstable", path: "/examples/unstable_scarp_007.jpg" },
+  { label: "Natural rock", tone: "stable", path: "/examples/stable_cliff_001.jpg" },
+  { label: "Engineered", tone: "stable", path: "/examples/stable_engineered_001.jpg" },
+  { label: "Crack", tone: "unstable", path: "/examples/unstable_crack_001.jpg" },
+  { label: "Scarp", tone: "unstable", path: "/examples/unstable_scarp_007.jpg" },
+];
+
+// Mirrors the backend's own cap. Rejecting here means a 12MB phone photo fails
+// instantly with an explanation instead of after a long upload.
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+
+const VIEWS = [
+  ["analyze", "Analyze"],
+  ["how", "How it works"],
+  ["about", "About"],
 ];
 
 function Spinner() {
@@ -20,57 +32,168 @@ export default function App() {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [result, setResult] = useState(null);
-  const [gradcamUrl, setGradcamUrl] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [croppedUrl, setCroppedUrl] = useState(null);
+  const [loading, setLoading] = useState(null); // null | "analyze" | "cropped" | "example"
   const [error, setError] = useState(null);
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+  const [warm, setWarm] = useState(null); // null unknown | false warming | true ready
+  const [view, setView] = useState("analyze");
+  // Respect the reader's OS setting on a first visit; a stored choice always wins
+  // after that. Defaulting everyone to dark ignored light-mode users entirely.
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark") return saved;
+    return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  });
 
   useEffect(() => {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
+  // The backend loads CLIP and SegFormer in a background thread at startup. Until
+  // that finishes the first analysis blocks for tens of seconds, which is
+  // indistinguishable from a hang. Poll until ready so the UI can say which it is.
+  useEffect(() => {
+    let cancelled = false;
+    let timer;
+
+    async function check() {
+      try {
+        const h = await fetchHealth();
+        if (cancelled) return;
+        setWarm(!!h.models_ready);
+        if (!h.models_ready) timer = setTimeout(check, 2000);
+      } catch {
+        if (!cancelled) {
+          setWarm(false);
+          timer = setTimeout(check, 5000);
+        }
+      }
+    }
+    check();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // Paste a screenshot straight in, rather than making the user save it to disk
+  // first. Bound to the document so it works without focusing the dropzone.
+  useEffect(() => {
+    function handlePaste(e) {
+      const item = [...(e.clipboardData?.items ?? [])].find((i) =>
+        i.type.startsWith("image/")
+      );
+      if (!item) return;
+      const pasted = item.getAsFile();
+      if (pasted) {
+        setView("analyze");
+        handleFileSelected(pasted);
+      }
+    }
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, []);
+
+  // Every object URL created below is revoked before being replaced and on
+  // unmount. Without this each new photo and crop leaks its blob for
+  // the lifetime of the tab.
+  function releaseDerived() {
+    setCroppedUrl((url) => {
+      if (url) URL.revokeObjectURL(url);
+      return null;
+    });
+  }
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+    };
+  }, [previewUrl, croppedUrl]);
+
   function handleFileSelected(selectedFile) {
+    // Validate before uploading. The backend rejects these too, but doing it here
+    // turns a round trip and a status code into an instant, specific message.
+    if (!selectedFile.type.startsWith("image/")) {
+      setError("That file isn't an image. Choose a JPEG or PNG photo.");
+      return;
+    }
+    if (selectedFile.size > MAX_UPLOAD_BYTES) {
+      const mb = (selectedFile.size / 1024 / 1024).toFixed(1);
+      setError(`That image is ${mb} MB. The limit is 12 MB — try a smaller version.`);
+      return;
+    }
+
+    setPreviewUrl((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return URL.createObjectURL(selectedFile);
+    });
     setFile(selectedFile);
-    setPreviewUrl(URL.createObjectURL(selectedFile));
     setResult(null);
-    setGradcamUrl(null);
+    releaseDerived();
+    setError(null);
+  }
+
+  function handleClear() {
+    setPreviewUrl((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return null;
+    });
+    setFile(null);
+    setResult(null);
+    releaseDerived();
     setError(null);
   }
 
   async function handleExampleClick(path) {
-    const res = await fetch(path);
-    const blob = await res.blob();
-    const exampleFile = new File([blob], path.split("/").pop(), { type: blob.type });
-    handleFileSelected(exampleFile);
+    // Fetching the example is a network call and can fail. Unhandled, it rejected
+    // silently and the click appeared to do nothing at all.
+    setLoading("example");
+    setError(null);
+    try {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`Couldn't load that example (${res.status}).`);
+      const blob = await res.blob();
+      handleFileSelected(
+        new File([blob], path.split("/").pop(), { type: blob.type || "image/jpeg" })
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleShowCropped() {
+    if (!file) return;
+    setLoading("cropped");
+    setError(null);
+    try {
+      const url = await croppedImage(file);
+      setCroppedUrl((old) => {
+        if (old) URL.revokeObjectURL(old);
+        return url;
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function handleAnalyze() {
     if (!file) return;
-    setLoading(true);
+    setLoading("analyze");
     setError(null);
     try {
-      const prediction = await predictImage(file);
-      setResult(prediction);
+      setResult(await predictImage(file));
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
-  async function handleShowGradcam() {
-    if (!file) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const url = await gradcamImage(file);
-      setGradcamUrl(url);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   return (
     <div className="app" data-theme={theme}>
@@ -94,90 +217,148 @@ export default function App() {
             {theme === "dark" ? "☀ Light mode" : "☾ Dark mode"}
           </button>
         </div>
-        <p>
-          Upload a <strong>ground-level photo of a slope</strong> to check for visible
-          surface indicators associated with potential slope instability.
-        </p>
-        <p className="looks-for">
-          <strong>Looks for:</strong> tension cracks · fresh scarps · loose debris/talus ·
-          exposed or disturbed soil · undercutting · rockfall evidence
-        </p>
-        <blockquote>
-          This tool identifies visible surface indicators associated with potential slope
-          instability. It does <strong>not</strong> predict landslides, determine whether a
-          landslide will occur, or assess subsurface geotechnical conditions. It is a research
-          prototype, not a safety determination — always consult a qualified geotechnical
-          professional for safety decisions.
-        </blockquote>
+
+        <nav className="tabs" aria-label="Sections">
+          {VIEWS.map(([id, label]) => (
+            <button
+              key={id}
+              className={`tab${view === id ? " tab--active" : ""}`}
+              aria-current={view === id ? "page" : undefined}
+              onClick={() => setView(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
       </header>
 
-      <main className="main-grid">
-        <section className="upload-section">
-          <ImageUpload onFileSelected={handleFileSelected} previewUrl={previewUrl} />
+      {view === "analyze" && (
+        <>
+          <p className="looks-for">
+            Looks for signs such as cracks · scarps · debris · disturbed soil · undercutting · rockfall
+          </p>
+          <blockquote>
+            Identifies visible surface indicators of potential instability. It does{" "}
+            <strong>not</strong> predict landslides or assess subsurface conditions. Research
+            prototype, not a safety determination — consult a qualified geotechnical professional.
+          </blockquote>
 
-          <div className="button-row">
-            <button onClick={handleAnalyze} disabled={!file || loading} className="btn-primary">
-              {loading ? <Spinner /> : null}
-              {loading ? "Working…" : "Analyze"}
-            </button>
-            <button onClick={handleShowGradcam} disabled={!file || loading} className="btn-secondary">
-              Show Grad-CAM
-            </button>
-          </div>
+          {warm === false && (
+            <p className="warming" role="status">
+              <span className="spinner" aria-hidden="true" />
+              Loading the vision models — the first analysis will be slow until this finishes.
+            </p>
+          )}
 
-          <div className="examples">
-            <span className="examples-label">Try an example</span>
-            <div className="examples-grid">
-              {EXAMPLES.map((ex) => (
-                <button
-                  key={ex.path}
-                  className="example-card"
-                  onClick={() => handleExampleClick(ex.path)}
-                  title={ex.label}
-                >
-                  <img src={ex.path} alt={ex.label} />
-                  <span className={`example-tag example-tag--${ex.tone}`}>{ex.label}</span>
+          <main className="main-grid">
+            <section className="upload-section">
+              <ImageUpload onFileSelected={handleFileSelected} previewUrl={previewUrl} />
+
+              <div className="button-row">
+                <button onClick={handleAnalyze} disabled={!file || loading} className="btn-primary">
+                  {loading === "analyze" && <Spinner />}
+                  {loading === "analyze" ? "Working…" : "Analyze"}
                 </button>
-              ))}
-            </div>
-          </div>
-        </section>
+                <button
+                  onClick={handleShowCropped}
+                  disabled={!file || loading}
+                  className="btn-secondary"
+                  title="See the image after sky and water are removed"
+                >
+                  {loading === "cropped" && <Spinner />}
+                  {loading === "cropped" ? "Working…" : "What the model sees"}
+                </button>
+                {file && (
+                  <button onClick={handleClear} disabled={loading} className="btn-ghost">
+                    Clear
+                  </button>
+                )}
+              </div>
 
-        <section className="results-section">
-          {error && <p className="error">{error}</p>}
-          {!result && !gradcamUrl && !error && (
-            <div className="placeholder">
-              <p>Results will appear here once you analyze an image.</p>
-            </div>
-          )}
-          {result && (
-            <>
-              <ConfidenceBars scores={result.scores} />
-              <AssessmentCard assessment={result.assessment} />
-            </>
-          )}
-          {gradcamUrl && (
-            <div className="gradcam-panel">
-              <h3>Grad-CAM — where the model is looking</h3>
-              <img src={gradcamUrl} alt="Grad-CAM heatmap" className="gradcam-image" />
-            </div>
-          )}
-        </section>
-      </main>
+              <div className="examples">
+                <span className="examples-label">Try an example</span>
+                <div className="examples-grid">
+                  {EXAMPLES.map((ex) => (
+                    <button
+                      key={ex.path}
+                      className="example-card"
+                      onClick={() => handleExampleClick(ex.path)}
+                      disabled={!!loading}
+                      title={ex.label}
+                    >
+                      <img src={ex.path} alt={ex.label} />
+                      <span className={`example-tag example-tag--${ex.tone}`}>{ex.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
 
-      <footer>
-        <p>
-          <strong>How to interpret results:</strong> the Assessment card is the actual call — it
-          uses a 35% threshold on P(unstable), not 50%, because missing a genuinely unstable slope
-          is treated as a costlier error than a false alarm. It can disagree with which class the
-          raw confidence bars show as highest — that's intentional, not a bug.
-        </p>
-        <ul>
-          <li>P(unstable) ≥ 65% → Potentially Unstable</li>
-          <li>35% ≤ P(unstable) &lt; 65% → Potentially Unstable (borderline) — inspect further</li>
-          <li>P(unstable) &lt; 35% → Stable</li>
-        </ul>
-      </footer>
+            <section className="results-section" aria-live="polite" aria-busy={!!loading}>
+              {error && <p className="error">{error}</p>}
+              {!result && !croppedUrl && !error && (
+                <div className="placeholder">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+                    <path d="M3 17l5-6 4 4 3-3 6 5" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="8.5" cy="7.5" r="1.6" />
+                  </svg>
+                  <p>Results will appear here.</p>
+                  <span>Choose a photo, then press Analyze.</span>
+                </div>
+              )}
+              {result && (
+                <>
+                  <ConfidenceBars
+                    scores={result.scores}
+                    threshold={result.unstable_threshold}
+                  />
+                  <AssessmentCard
+                    assessment={result.assessment}
+                    pUnstable={result.scores?.unstable}
+                    threshold={result.unstable_threshold}
+                    highConfidence={result.unstable_high_confidence}
+                  />
+                  {result.sky_cropped > 0 && (
+                    <p className="crop-note">
+                      Sky and open water cropped before analysis — model saw{" "}
+                      {Math.round((1 - result.sky_cropped) * 100)}% of the photo.
+                    </p>
+                  )}
+                </>
+              )}
+              {croppedUrl && (
+                <div className="gradcam-panel">
+                  <h3>What the model sees</h3>
+                  <img src={croppedUrl} alt="The photo after sky and water removal"
+                       className="gradcam-image" />
+                  <p className="gradcam-hint">
+                    Sky and open water are removed before analysis so the classifier reads the
+                    ground, not the weather. If this crop lost the slope itself, treat the result
+                    with suspicion.
+                  </p>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer>
+            <p>
+              The Assessment is the actual call: it flags at 35% P(unstable), not 50%, because
+              missing an unstable slope costs more than a false alarm. It can disagree with the
+              highest confidence bar — that's intentional.
+            </p>
+            <ul>
+              <li>P(unstable) ≥ 65% → Potentially Unstable</li>
+              <li>35% ≤ P(unstable) &lt; 65% → Potentially Unstable (borderline) — inspect further</li>
+              <li>P(unstable) &lt; 35% → Stable</li>
+            </ul>
+          </footer>
+        </>
+      )}
+
+      {view === "how" && <HowItWorks />}
+      {view === "about" && <About />}
     </div>
   );
 }

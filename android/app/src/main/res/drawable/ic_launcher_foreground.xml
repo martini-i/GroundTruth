@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The slope glyph from the web app, drawn inside the 72dp adaptive-icon safe
+     zone so no part of it is clipped by a round or squircle mask. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="18" android:translateY="18">
+        <path
+            android:fillColor="#9C8BFF"
+            android:pathData="M6,58h60L45,18l-12,21l-9,-12z" />
+    </group>
+</vector>
