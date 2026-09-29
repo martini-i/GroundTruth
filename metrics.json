@@ -1,11 +1,21 @@
 {
   "backbone": "clip",
-  "accuracy": 81.0,
-  "spread": 1.1,
-  "stable_recall": 80.4,
-  "unstable_recall": 81.6,
-  "n_images": 179,
-  "n_groups": 170,
+  "accuracy": 81.3,
+  "spread": 1.6,
+  "stable_recall": 77.7,
+  "unstable_recall": 84.1,
+  "auc": 90.9,
+  "brier": 0.128,
+  "deployed": {
+    "flag_threshold": 0.35,
+    "high_threshold": 0.65,
+    "unstable_recall": 92.5,
+    "unstable_precision": 75.8,
+    "stable_recall": 61.2,
+    "borderline_rate": 24.4
+  },
+  "n_images": 187,
+  "n_groups": 178,
   "folds": 5,
   "seeds": [
     1,
@@ -19,5 +29,5 @@
     9,
     10
   ],
-  "measured": "2026-08-27"
+  "measured": "2026-09-22"
 }

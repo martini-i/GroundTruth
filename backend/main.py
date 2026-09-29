@@ -7,6 +7,8 @@ import io
 import os
 import secrets
 import sys
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,15 +21,44 @@ from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
 
-app = FastAPI(title="GroundTruth API")
+_warm = {"ready": False}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Load CLIP, the probe and the sky segmenter in the background at startup.
+
+    Both models are loaded lazily on first use, which made the first prediction
+    after a cold start take tens of seconds while the user stared at a spinner.
+    Warming in a daemon thread keeps startup itself non-blocking, so the server
+    still answers /health immediately.
+    """
+    def run():
+        try:
+            model_utils.load_model()
+            model_utils._load_segmentation_model()
+            _warm["ready"] = True
+        except Exception as exc:            # never let warmup kill the server
+            _warm["error"] = str(exc)
+
+    threading.Thread(target=run, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="GroundTruth API", lifespan=lifespan)
 
 # --- public-app limits -------------------------------------------------------
 # This is a research demo on one box, not a service with a capacity plan. The
 # caps exist so a single caller cannot monopolise it: /predict costs a CLIP
-# forward pass. (The attribution heatmap was removed from the app — it cost
-# ~2.5s of CPU per image and mostly showed the model attending away from the
-# slope, which is a real property of the model but not a useful public feature.
-# model_utils.gradcam_overlay and gradcam.py remain for offline diagnosis.)
+# forward pass, and an unbounded upload costs memory before it costs anything
+# else.
+
+# Largest upload accepted, in bytes. A phone photo is 2-8MB; anything past this
+# is either a mistake or an attempt to exhaust memory, and the body is read into
+# RAM before PIL ever sees it.
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+
 RATE_LIMITS = {
     "predict": (40, 10),      # 40 analyses per 10 minutes per client
 }
@@ -74,37 +105,36 @@ app.add_middleware(
 )
 
 
-_warm = {"ready": False}
-
-
-@app.on_event("startup")
-def _warmup():
-    """
-    Load CLIP, the probe and the sky segmenter in the background at startup.
-
-    Both models are loaded lazily on first use, which made the first prediction
-    after a cold start take tens of seconds while the user stared at a spinner.
-    Warming in a daemon thread keeps startup itself non-blocking, so the server
-    still answers /health immediately.
-    """
-    import threading
-
-    def run():
-        try:
-            model_utils.load_model()
-            model_utils._load_segmentation_model()
-            _warm["ready"] = True
-        except Exception as exc:            # never let warmup kill the server
-            _warm["error"] = str(exc)
-
-    threading.Thread(target=run, daemon=True).start()
-
-
 def _load_upload_image(file: UploadFile) -> Image.Image:
+    """
+    Read an upload into a PIL image, refusing anything that is not one.
+
+    Three distinct failures, all of which used to surface as a 500: a body
+    larger than MAX_UPLOAD_BYTES, a file that is not an image at all, and a
+    decompression bomb (a small file whose declared pixel dimensions are huge).
+    Each is the caller's fault, so each gets a 4xx that says which it was.
+    """
+    data = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image is larger than {MAX_UPLOAD_BYTES // (1024 * 1024)}MB. "
+                   "Try a lower-resolution photo.",
+        )
+    if not data:
+        raise HTTPException(status_code=400, detail="No image was uploaded")
     try:
-        return Image.open(io.BytesIO(file.file.read()))
+        image = Image.open(io.BytesIO(data))
+        image.load()
     except UnidentifiedImageError:
         raise HTTPException(status_code=400, detail="Uploaded file is not a valid image")
+    except Image.DecompressionBombError:
+        raise HTTPException(
+            status_code=413, detail="Image pixel dimensions are too large to process"
+        )
+    except OSError:
+        raise HTTPException(status_code=400, detail="Image file is truncated or corrupt")
+    return image
 
 
 @app.get("/health")
@@ -176,6 +206,15 @@ def predict(request: Request, file: UploadFile = File(...)):
     fp = _enforce_rate_limit(request, "predict")
     image = _load_upload_image(file)
     result = model_utils.predict(image)
+
+    # A refusal is a 422, not a 200 with empty scores. Both clients already
+    # surface `detail` from a failed response, so the user sees the specific
+    # reason ("Almost the entire frame is sky...") with no client change — and
+    # neither client can accidentally render a band for a prediction that was
+    # never made.
+    if not result.get("assessable", True):
+        raise HTTPException(status_code=422, detail=result["message"])
+
     try:
         db.log_prediction(
             p_unstable=result["scores"].get("unstable", 0.0),

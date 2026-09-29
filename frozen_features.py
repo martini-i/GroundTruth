@@ -1,11 +1,11 @@
 """
 frozen_features.py — Is fine-tuning the problem, or is the representation?
 
-Fine-tuning adapts ~8.4M parameters to ~135 training images. This instead keeps
-a pretrained backbone frozen, turns each image into one feature vector, and fits
-a small classifier on top (~1k parameters). Features are extracted once and
-cached, so evaluating a backbone takes seconds rather than the ~45 minutes a
-fine-tuning cross-validation run costs.
+Fine-tuning adapts millions of parameters to roughly a hundred training images.
+This instead keeps a pretrained backbone frozen, turns each image into one
+feature vector, and fits a small calibrated classifier on top. Features are
+extracted once and cached, so evaluating a backbone takes seconds rather than
+the tens of minutes a fine-tuning cross-validation run costs.
 
 Backbones:
     resnet18   ImageNet supervised, 512-d   — same features train_model.py starts from
@@ -13,7 +13,10 @@ Backbones:
     clip       CLIP ViT-B/32, 512-d         — image-text pretraining
 
 Uses the same grouped, stratified folds as cross_validate.py, so numbers are
-directly comparable with the fine-tuning baseline in FINDINGS.md.
+directly comparable with the fine-tuned baseline it measures.
+
+The deployed backbone's result is written to metrics.json, which the backend
+serves and both clients display — the only place a performance figure is quoted.
 
 Reading the result:
   frozen ~= or > fine-tuning        -> fine-tuning was overfitting; use a probe
@@ -28,22 +31,31 @@ Usage:
 
 import argparse
 import warnings
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 import torch
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import brier_score_loss, confusion_matrix, roc_auc_score
 from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from PIL import Image
 
 import cross_validate as cv
+import model_utils
 from dataset import index_key
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
 CACHE_DIR = Path(".feature_cache")
+
+# The deployed bands, imported rather than restated: if the app changes where it
+# flags, the measurement has to follow it or it stops describing the app.
+FLAG_THRESHOLD = model_utils.UNSTABLE_THRESHOLD
+HIGH_THRESHOLD = model_utils.UNSTABLE_HIGH_CONFIDENCE
 
 # Publishing to metrics.json requires this exact seed set — see main().
 DEFAULT_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -130,38 +142,92 @@ def get_features(name, paths):
     return feats
 
 
+def _inner_splits(y, g, max_splits=5):
+    """
+    Grouped calibration folds inside one training fold.
+
+    Calibration has to be fitted on data the base model did not see, and the
+    split has to respect site groups for the same reason the outer one does.
+    The fold count is reduced if the minority class has too few groups to fill
+    max_splits, which happens on small training portions.
+    """
+    per_class = min(len(set(g[y == c])) for c in (0, 1))
+    n = max(2, min(max_splits, per_class))
+    return list(StratifiedGroupKFold(n_splits=n, shuffle=True,
+                                     random_state=0).split(np.zeros(len(y)), y, g))
+
+
 def evaluate(feats, labels, groups):
     """
-    Repeated grouped CV: every seed in args.seeds, pooled.
+    Repeated grouped CV of the *deployed* pipeline: every seed in args.seeds.
 
-    A single seed is a lottery ticket. Measured on this dataset, ten seeds span
-    79.3-83.8 for the same model and data — 4.5 points purely from fold
-    assignment. Reporting one seed is the same mistake as reporting one held-out
-    split, which FINDINGS section 2 already caught one level down; the fix is the
-    same, so the default here is ten seeds rather than one.
+    Two things this deliberately does that a plain accuracy sweep does not.
 
-    Returns per-fold values pooled across seeds, plus the per-seed means, whose
-    spread is the uncertainty on the *estimate* (the within-seed fold spread is
-    not).
+    1. It calibrates inside the fold, exactly as train_probe.py does when
+       fitting the shipped probe. Scoring a raw LogisticRegression measured a
+       model nobody uses: uncalibrated CLIP-feature probes are wildly
+       overconfident, so every probability-dependent number was wrong.
+
+    2. It reports the deployed operating point. The app flags at
+       UNSTABLE_THRESHOLD, not at 0.5, because a missed unstable slope costs
+       more than a false alarm — so recall at 0.5 is not the recall anyone
+       experiences. Accuracy at 0.5 is kept as well, since that is the figure
+       comparable across backbones and against the fine-tuned baseline.
+
+    A single seed is a lottery ticket: fold assignment alone moves the mean by
+    several points on a dataset this size, so the default averages over ten.
+    The +/- reported by main() is the spread of per-seed means, i.e. uncertainty
+    on the estimate, not the wider within-seed fold spread.
+
+    Returns a dict of metric name -> list of per-fold values, plus the per-seed
+    accuracy means under "seed_means".
     """
-    accs, s_recs, u_recs, seed_means = [], [], [], []
+    out = defaultdict(list)
     for seed in args.seeds:
         splitter = StratifiedGroupKFold(n_splits=args.folds, shuffle=True,
                                         random_state=seed)
         seed_accs = []
         for tr, va in splitter.split(feats, labels, groups):
             assert not (set(groups[tr]) & set(groups[va])), "group leak"
-            scaler = StandardScaler().fit(feats[tr])
-            clf = LogisticRegression(max_iter=5000, class_weight="balanced", C=1.0)
-            clf.fit(scaler.transform(feats[tr]), labels[tr])
-            pred = clf.predict(scaler.transform(feats[va]))
-            cm = confusion_matrix(labels[va], pred, labels=[0, 1])
-            acc = (pred == labels[va]).mean() * 100
-            accs.append(acc); seed_accs.append(acc)
-            s_recs.append(cm[0][0] / cm[0].sum() * 100)
-            u_recs.append(cm[1][1] / cm[1].sum() * 100)
-        seed_means.append(np.mean(seed_accs))
-    return accs, s_recs, u_recs, seed_means
+
+            base = make_pipeline(
+                StandardScaler(),
+                LogisticRegression(max_iter=5000, class_weight="balanced", C=1.0),
+            )
+            model = CalibratedClassifierCV(
+                base, method="sigmoid",
+                cv=_inner_splits(labels[tr], groups[tr]),
+            )
+            model.fit(feats[tr], labels[tr])
+
+            y = labels[va]
+            p = model.predict_proba(feats[va])[:, 1]
+
+            # Argmax point: comparable across backbones and with the baseline.
+            pred = (p >= 0.5).astype(int)
+            cm = confusion_matrix(y, pred, labels=[0, 1])
+            acc = (pred == y).mean() * 100
+            out["acc"].append(acc); seed_accs.append(acc)
+            out["stable_recall"].append(cm[0][0] / max(cm[0].sum(), 1) * 100)
+            out["unstable_recall"].append(cm[1][1] / max(cm[1].sum(), 1) * 100)
+
+            # Deployed point: what a user of the app actually gets.
+            flagged = (p >= FLAG_THRESHOLD).astype(int)
+            fcm = confusion_matrix(y, flagged, labels=[0, 1])
+            tp, fp = fcm[1][1], fcm[0][1]
+            out["flag_unstable_recall"].append(tp / max(fcm[1].sum(), 1) * 100)
+            out["flag_stable_recall"].append(fcm[0][0] / max(fcm[0].sum(), 1) * 100)
+            out["flag_precision"].append(tp / max(tp + fp, 1) * 100)
+            out["borderline_rate"].append(
+                ((p >= FLAG_THRESHOLD) & (p < HIGH_THRESHOLD)).mean() * 100
+            )
+
+            # Threshold-free ranking quality, and whether the calibrated
+            # probabilities mean what they say.
+            out["auc"].append(roc_auc_score(y, p) * 100 if len(set(y)) > 1 else np.nan)
+            out["brier"].append(brier_score_loss(y, p))
+        out["seed_means"].append(np.mean(seed_accs))
+    return out
 
 
 def main():
@@ -169,41 +235,64 @@ def main():
     print(f"{len(paths)} images | {len(set(groups))} groups | "
           f"folds={args.folds} seeds={len(args.seeds)}\n")
 
-    rows = []
+    results = {}
     for name in args.backbones:
         feats = get_features(name, paths)
-        accs, s_recs, u_recs, seed_means = evaluate(feats, labels, groups)
+        m = evaluate(feats, labels, groups)
+        m["dim"] = feats.shape[1]
+        results[name] = m
+
+        seed_means = m["seed_means"]
         # +/- is the spread of per-seed means: uncertainty on the estimate. The
         # within-seed fold spread is larger and answers a different question.
-        rows.append((name, feats.shape[1], np.mean(seed_means), np.std(seed_means),
-                     np.mean(s_recs), np.mean(u_recs)))
         print(f"  {name}: acc={np.mean(seed_means):.1f} +/- {np.std(seed_means):.1f}  "
               f"(seeds {min(seed_means):.1f}-{max(seed_means):.1f})  "
-              f"stable={np.mean(s_recs):.1f} unstable={np.mean(u_recs):.1f}\n", flush=True)
+              f"stable={np.mean(m['stable_recall']):.1f} "
+              f"unstable={np.mean(m['unstable_recall']):.1f}  "
+              f"auc={np.nanmean(m['auc']):.1f} brier={np.mean(m['brier']):.3f}")
+        print(f"  {'':>{len(name)}}  at the deployed {FLAG_THRESHOLD:.2f} flag: "
+              f"unstable recall={np.mean(m['flag_unstable_recall']):.1f} "
+              f"precision={np.mean(m['flag_precision']):.1f} "
+              f"stable recall={np.mean(m['flag_stable_recall']):.1f} "
+              f"borderline={np.mean(m['borderline_rate']):.1f}%\n", flush=True)
 
     # Write the deployed backbone's result to metrics.json. Everything that
-    # quotes an accuracy to a user reads that file, so the figure cannot go stale
-    # silently the way a hardcoded string does — it read 82% +/- 7 in the app long
-    # after the real number had moved twice.
+    # quotes a figure to a user reads that file, so it cannot go stale silently
+    # the way a hardcoded string does.
     #
     # Only a full-strength run may write it. A quick exploratory run with a
     # couple of seeds would otherwise overwrite the public figure with a
     # lower-confidence estimate, silently and with no indication in the app.
     full_strength = args.seeds == DEFAULT_SEEDS and not args.no_cache
-    clip_row = next((r for r in rows if r[0] == "clip"), None)
-    if clip_row is not None and not full_strength:
+    clip = results.get("clip")
+    if clip is not None and not full_strength:
         print()
         print(f"not writing metrics.json: needs the default {len(DEFAULT_SEEDS)} "
               f"seeds (got {len(args.seeds)}). Re-run without --seeds to publish.")
-    if clip_row is not None and full_strength:
+    if clip is not None and full_strength:
         import json, datetime
-        name, dim, acc, sd, s_rec, u_rec = clip_row
+        avg = lambda k: round(float(np.nanmean(clip[k])), 1)
         Path("metrics.json").write_text(json.dumps({
-            "backbone": name,
-            "accuracy": round(float(acc), 1),
-            "spread": round(float(sd), 1),
-            "stable_recall": round(float(s_rec), 1),
-            "unstable_recall": round(float(u_rec), 1),
+            "backbone": "clip",
+            # Argmax point: comparable with the fine-tuned baseline and across
+            # backbones.
+            "accuracy": round(float(np.mean(clip["seed_means"])), 1),
+            "spread": round(float(np.std(clip["seed_means"])), 1),
+            "stable_recall": avg("stable_recall"),
+            "unstable_recall": avg("unstable_recall"),
+            "auc": avg("auc"),
+            "brier": round(float(np.mean(clip["brier"])), 3),
+            # The operating point the app actually ships. Reported separately
+            # because it is a different question from accuracy: it trades
+            # stable recall away to catch more unstable slopes.
+            "deployed": {
+                "flag_threshold": FLAG_THRESHOLD,
+                "high_threshold": HIGH_THRESHOLD,
+                "unstable_recall": avg("flag_unstable_recall"),
+                "unstable_precision": avg("flag_precision"),
+                "stable_recall": avg("flag_stable_recall"),
+                "borderline_rate": avg("borderline_rate"),
+            },
             "n_images": len(paths),
             "n_groups": len(set(groups)),
             "folds": args.folds,
@@ -212,14 +301,17 @@ def main():
         }, indent=2) + "\n", encoding="utf-8")
         print("\nwrote metrics.json")
 
-    print("=" * 74)
-    print(f"{'backbone':>10} {'dim':>6} {'accuracy':>16} {'stable':>9} {'unstable':>10}")
-    for name, dim, a, sd, s, u in rows:
-        print(f"{name:>10} {dim:>6} {a:>9.1f} +/- {sd:<4.1f} {s:>8.1f}% {u:>9.1f}%")
-    print("-" * 74)
-    print(f"{'fine-tuned':>10} {'-':>6} {66.5:>9.1f} +/- {9.6:<4.1f} {64.3:>8.1f}% {68.3:>9.1f}%"
-          "   <- baseline (FINDINGS.md §2)")
-    print("=" * 74)
+    print("=" * 78)
+    print(f"{'backbone':>10} {'dim':>6} {'accuracy':>16} {'stable':>9} {'unstable':>10} {'AUC':>8}")
+    for name, m in results.items():
+        sm = m["seed_means"]
+        print(f"{name:>10} {m['dim']:>6} {np.mean(sm):>9.1f} +/- {np.std(sm):<4.1f} "
+              f"{np.mean(m['stable_recall']):>8.1f}% {np.mean(m['unstable_recall']):>9.1f}% "
+              f"{np.nanmean(m['auc']):>7.1f}")
+    print("-" * 78)
+    print("accuracy/recall above are at 0.5. The app flags at "
+          f"{FLAG_THRESHOLD:.2f}; see the per-backbone lines for that point.")
+    print("=" * 78)
 
 
 if __name__ == "__main__":

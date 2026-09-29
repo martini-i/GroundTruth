@@ -155,16 +155,6 @@ fun AnalyzeScreen(vm: AnalyzeViewModel, onOpenSettings: () -> Unit) {
                 )
             }
 
-            state.heatmapPng?.let {
-                ImagePanel(
-                    title = "Where the model looked",
-                    bytes = it,
-                    caption = "Each region was covered up in turn to see how much the " +
-                        "prediction changed. Bright areas are the ones the call actually " +
-                        "depended on.",
-                )
-            }
-
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -300,23 +290,14 @@ private fun ActionButtons(
             ) { Text("Clear") }
         }
 
-        // Secondary views of the same photo. Analysis has already run, so there is
-        // no Analyze button here — only the two explanations of it.
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(
-                onClick = vm::showCropped,
-                enabled = busy == null,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(if (busy == Busy.CROPPING) "Working…" else "What it sees")
-            }
-            OutlinedButton(
-                onClick = vm::showHeatmap,
-                enabled = busy == null,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(if (busy == Busy.HEATMAP) "Working…" else "Heatmap")
-            }
+        // A secondary view of the same photo. Analysis has already run, so there
+        // is no Analyze button here — only the explanation of what it read.
+        OutlinedButton(
+            onClick = vm::showCropped,
+            enabled = busy == null,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (busy == Busy.CROPPING) "Working…" else "What the model sees")
         }
 
         TextButton(onClick = onGallery, enabled = busy == null) {

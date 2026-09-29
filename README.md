@@ -32,14 +32,14 @@ the front. The wording is deliberate wherever it appears.
 
 ## What it does
 
-Upload or photograph a slope. The system returns:
+Upload or photograph a slope. If the image is not one the classifier can speak to —
+indoors, too dark, almost entirely sky, no ground surface in frame — it says so and
+stops rather than scoring it. Otherwise it returns:
 
 1. **Class probabilities** — P(stable) and P(unstable), calibrated.
 2. **An assessment** in one of three bands (see [thresholds](#asymmetric-thresholds)).
 3. **What the model sees** — the image after sky and water removal, so you can check
    the preprocessing did not discard the slope.
-4. **Where the model looked** — an occlusion heatmap of the regions the prediction
-   actually depended on.
 
 Available as a web app and an Android client. Both call the same backend, so both
 give the same answer for the same photograph.
@@ -48,28 +48,54 @@ give the same answer for the same photograph.
 
 ## Results
 
-Grouped 5-fold cross-validation over 179 images, split by site so photographs of one
-location never appear on both sides of a fold. 170 groups, **averaged over 10 fold
-seeds** — a single seed varies by 4.5 points on fold assignment alone, so one seed is a
-lottery ticket. The ± is the spread of per-seed means, i.e. uncertainty on the estimate.
+**No performance figure is written down in this file, or anywhere else in prose.**
+The measured numbers live in `metrics.json`, written by `frozen_features.py` and
+served through `/stats`, so the figure shown in the app is always the figure that was
+last measured. A number typed into a README goes stale the moment the dataset grows,
+silently and invisibly.
 
-The figure is written to `metrics.json` by `frozen_features.py` and served through
-`/stats`, so the number shown in the app is the number that was measured.
+```bash
+python frozen_features.py
+```
 
-| Configuration | Trained parameters | Accuracy |
-|---|---:|---:|
-| **Frozen CLIP + calibrated probe** *(deployed)* | **513** | **81.0% ± 1.1** |
-| Frozen DINOv2 + probe | 385 | 76.3% |
-| Frozen ResNet18 + probe | 513 | 66.9% |
-| Fine-tuned ResNet18 *(baseline)* | ~8.4M | 66.5% ± 9.6 |
+What the comparison is *for* — which does not change as the data grows:
 
-The third row is the finding. A frozen ResNet18 probe **matches** full fine-tuning
-while training 8,000× fewer parameters — so overfitting was never the bottleneck.
-Swapping the frozen features to CLIP gained 15 points. **The representation was the
-constraint**, not the training procedure and not the volume of data.
+| Configuration | Trained parameters |
+|---|---:|
+| **Frozen CLIP + calibrated probe** *(deployed)* | ~500 |
+| Frozen DINOv2 + probe | ~400 |
+| Frozen ResNet18 + probe | ~500 |
+| Fine-tuned ResNet18 *(baseline)* | ~8.4M |
 
-That is also why the learning curve is flat: quadrupling the training set (35 → 136
-images) gained 3.6 points, non-monotonically. Bulk collection does not help here.
+The finding is the shape of that table, not its numbers. A frozen ResNet18 probe
+**matches** full fine-tuning while training thousands of times fewer parameters — so
+overfitting was never the bottleneck. Swapping the frozen features to CLIP gains a
+large margin on top of that. **The representation was the constraint**, not the
+training procedure and not the volume of data.
+
+That is also why the learning curve is close to flat: quadrupling the training set
+moves accuracy by a few points, non-monotonically. Bulk collection does not help
+here; targeted counterexamples might, and which ones is answered under
+[Known limitations](#known-limitations).
+
+### How the numbers are produced
+
+Grouped k-fold cross-validation, split by site so photographs of one location never
+appear on both sides of a fold, **averaged over ten fold seeds** — a single seed
+varies by several points on fold assignment alone, so one seed is a lottery ticket.
+The ± reported is the spread of per-seed means: uncertainty on the estimate.
+
+Each fold fits the *deployed* pipeline, calibration included, and reports two
+operating points:
+
+- **at 0.5** — accuracy and per-class recall, comparable across backbones and against
+  the fine-tuned baseline;
+- **at the deployed flag threshold** — unstable recall, precision, and how often the
+  borderline band fires. This is the point a user of the app actually experiences,
+  and it is deliberately not the same as the accuracy figure.
+
+Plus ROC AUC, which is threshold-free, and Brier score, which asks whether the
+calibrated probabilities mean what they say.
 
 ---
 
@@ -90,19 +116,21 @@ Five stages run on every image. Order matters and each stage's output shape is f
 
 | # | Stage | Output |
 |---|---|---|
+| 0 | **Input gate** — refuse images the probe cannot speak to: too small, too dark, near-uniform, indoors, all sky, no recognisable ground. Reads the stage-1 segmentation, so it costs no extra pass. | assessable / refusal |
 | 1 | **Sky/water removal** — SegFormer segments against ADE20K; sky, water, sea, river and lake are background. Keeps the 2D bounding box of everything else. | cropped image |
 | 2 | **Feature extraction** — frozen CLIP ViT-B/32, `vision_model` → `visual_projection`. | `float32[512]` |
 | 3 | **Classification** — `StandardScaler` + balanced logistic regression, sigmoid-calibrated. | P(unstable) |
 | 4 | **Assessment** — three bands at asymmetric thresholds. | stable / borderline / unstable |
-| 5 | **Attribution** *(on request)* — occlusion. | PNG overlay |
 
-Stage 1 has more guards than crop. If background covers under 3% of the frame nothing
-is cropped; no edge may remove more than 55% of its axis; the result must stay at
-least 32px per side; a close-up that is almost entirely background is returned
-untouched. An earlier version cropped at the median sky depth over sky-containing
-columns only — on a photo where a cliff fills one side top to bottom, those columns
-are excluded entirely, so the median came from the open-horizon side and removed most
-of the subject.
+Stage 1 has more guards than crop. If background covers too little of the frame
+nothing is cropped; no edge may remove more than a capped share of its axis; the
+result must stay above a minimum size; a close-up that is almost entirely background
+is returned untouched. The constants are named at the top of `model_utils.py`.
+
+An earlier version cropped at the median sky depth over sky-containing columns only —
+on a photo where a cliff fills one side top to bottom, those columns are excluded
+entirely, so the median came from the open-horizon side and removed most of the
+subject.
 
 ### What is and is not learned from slope data
 
@@ -110,52 +138,33 @@ of the subject.
 |---|---|---|
 | SegFormer *(frozen)* | ADE20K scene parsing | No — it finds sky and water |
 | CLIP ViT-B/32 *(frozen)* | ~400M image–caption pairs | No — it describes rock, soil, vegetation |
-| **The probe** *(trained here)* | 179 labelled slope photos | **Yes — this is the entire classifier** |
-| ResNet18 baseline *(trained here)* | 20 epochs, AdamW | Yes — the conventional approach, kept for comparison |
+| **The probe** *(trained here)* | the labelled slope photographs | **Yes — this is the entire classifier** |
+| ResNet18 baseline *(trained here)* | the same photographs, fine-tuned end to end | Yes — the conventional approach, kept for comparison |
 
-CLIP supplies the visual vocabulary; it has no concept of stability. The 512 weights
-define a direction through that space which does not exist in CLIP and was found only
-by fitting to labelled examples. In standard terminology: transfer learning with a
-frozen backbone and a calibrated linear probe — the usual approach at hundreds of
-images rather than hundreds of thousands.
+CLIP supplies the visual vocabulary; it has no concept of stability. The probe's
+weights define a direction through that space which does not exist in CLIP and was
+found only by fitting to labelled examples. In standard terminology: transfer
+learning with a frozen backbone and a calibrated linear probe — the usual approach at
+hundreds of images rather than hundreds of thousands.
 
 ### Asymmetric thresholds
 
+The two cutoffs live in `model_utils.py` (`UNSTABLE_THRESHOLD` and
+`UNSTABLE_HIGH_CONFIDENCE`) and are returned by `/predict` on every response:
+
 ```
-P(unstable) ≥ 0.65   →  Potentially Unstable
-0.35 ≤ P < 0.65      →  Borderline — field inspection recommended
-P < 0.35             →  Stable
+P(unstable) ≥ high    →  Potentially Unstable
+flag ≤ P < high       →  Borderline — field inspection recommended
+P < flag              →  Stable
 ```
 
-Flagging begins at 0.35, not 0.50, because missing an unstable slope costs more than a
-false alarm. **The assessment can therefore disagree with the taller confidence bar**,
-which the interface states outright rather than hiding.
+Flagging begins below 0.5, not at it, because missing an unstable slope costs more
+than a false alarm. **The assessment can therefore disagree with the taller
+confidence bar**, which the interface states outright rather than hiding.
 
-Borderline is its own band with its own colour. It is the model reporting uncertainty,
-which is a different claim from "unstable" and must not borrow its alarm.
-
-### Attribution
-
-Not Grad-CAM. Grad-CAM needs a convolutional feature map to weight by channel
-gradient; CLIP's vision tower is a transformer and has none.
-
-Instead: **mask a region, measure how far the unstable logit actually falls.** 14×14
-sample points, 32px overlapping occluder, 196 batched forward passes, roughly 5s.
-Faithful by construction — it measures the model rather than a proxy for it.
-
-Two rendering details matter as much as the method:
-
-- **Percentile clip (p85–p99), not min-max.** On a confident prediction almost every
-  occlusion lowers the logit, so min-max paints the whole frame hot and hides the
-  structure.
-- **Reflect-pad by one cell and discard the outer ring.** Occluding a cell on the true
-  frame edge produces a large spurious response. Measured: on one image the border
-  ring averaged **+1.34** against **−0.07** interior, and padding so the same content
-  moved inward collapsed it to **+0.01**. It was tracking the frame, not the
-  photograph, and the percentile clip amplified it into a bright halo.
-
-Validation: masking the top 10% of attributed cells destroys on average **44
-percentage points more** of the unstable logit than masking the same number at random.
+Borderline is its own band with its own colour. It is the model reporting
+uncertainty, which is a different claim from "unstable" and must not borrow its
+alarm.
 
 ---
 
@@ -179,24 +188,26 @@ python crop_dataset_sky.py slope_dataset/train/unstable/new_photo.jpg
 
 ### 2. Site grouping
 
-Two photographs of the same cutting taken metres apart are not independent samples. If
-one lands in train and the other in validation, the reported accuracy measures memory
-rather than generalisation.
+Two photographs of the same cutting taken metres apart are not independent samples.
+If one lands in train and the other in validation, the reported accuracy measures
+memory rather than generalisation.
 
 `labels.csv` carries a `site_id`. Every loader converts a blank one into
-`__solo__{filename}` so unlinked images become their own group rather than collapsing
-into one giant false group. `cross_validate.py` asserts no group spans a fold;
-`verify_dataset.py` checks the same property over the CSV.
+`__solo__{filename}` so unlinked images become their own group rather than
+collapsing into one giant false group. `frozen_features.py` and `cross_validate.py`
+assert no group spans a fold; `verify_dataset.py` checks the same property over the
+CSV.
 
 ### 3. Feature cache keying
 
-Extracted features are cached to disk, keyed by a **hash of the file list** — never
-its length. A count-keyed cache returns feature rows belonging to a previous set of
-images whenever the dataset changes without changing size. They still line up
-positionally against the new labels, so nothing errors and every downstream number is
-quietly wrong.
+Extracted features are cached to disk, keyed by a **hash of the file list plus each
+file's size and modification time** — never by its length. A count-keyed cache
+returns feature rows belonging to a previous set of images whenever the dataset
+changes without changing size. They still line up positionally against the new
+labels, so nothing errors and every downstream number is quietly wrong. Size and
+mtime additionally catch an *in-place* edit, which re-cropping an existing image is.
 
-`train_probe.py`, `frozen_features.py` and `dupes.py` all use the same scheme.
+`dataset.py` owns the scheme, and every script goes through it.
 
 ---
 
@@ -232,8 +243,8 @@ venv/Scripts/pip install -r backend/requirements.txt
 venv/Scripts/uvicorn backend.main:app --port 8000
 ```
 
-Add `--host 0.0.0.0` to reach it from a phone on the same network. Without it uvicorn
-binds `127.0.0.1` and only the local machine can connect.
+Add `--host 0.0.0.0` to reach it from a phone on the same network. Without it
+uvicorn binds `127.0.0.1` and only the local machine can connect.
 
 ### Web frontend
 
@@ -242,8 +253,9 @@ npm --prefix frontend install
 npm --prefix frontend run dev
 ```
 
-Dev runs on `:5173` and calls the backend at `:8000`. For production, `npm run build`
-writes `frontend/dist`, which FastAPI then serves itself — one origin, one port.
+Dev runs on `:5173` and calls the backend at `:8000`. For production,
+`npm run build` writes `frontend/dist`, which FastAPI then serves itself — one
+origin, one port.
 
 ### Android client
 
@@ -259,161 +271,158 @@ cd android && ./gradlew.bat assembleDebug
 |---|---|---|
 | `GET /health` | status, `models_ready` | Distinguishes "up" from "warm" |
 | `GET /stats` | dataset and model facts | Read from `labels.csv` per request |
-| `POST /predict` | scores, assessment, both thresholds | Rate limited: 40 / 10 min per client |
+| `POST /predict` | scores, assessment, both thresholds | Rate limited; upload size capped; **422** if the image is not assessable |
 | `POST /cropped` | the image as the model receives it | |
-| `POST /gradcam` | attribution overlay | ~5s |
 | `GET /monitoring` | confidence distribution | Admin token; **fails closed** |
 
 ### Reproducing the results
 
 ```bash
-python verify_dataset.py                              # gate: run before trusting anything
-python frozen_features.py --backbones clip --folds 5  # the headline accuracy
-python cross_validate.py --folds 5 --seed 42          # fine-tuned baseline
-python audit_errors.py --seeds 1 2 3 --folds 5        # per-image failure rates
-python learning_curve.py --fractions 0.25 0.5 0.75 1.0
-python dupes.py --threshold 0.93                      # near-duplicate audit
-python train_probe.py                                 # refit the deployed model
+python verify_dataset.py
+python check_gate.py
+python frozen_features.py
+python cross_validate.py
+python audit_errors.py
+python learning_curve.py
+python dupes.py
+python train_probe.py
 ```
+
+Run `verify_dataset.py` first — it gates everything else. `frozen_features.py`
+rewrites `metrics.json`; `train_probe.py` rewrites `slope_probe.joblib`. Each script
+takes flags; `--help` lists them.
 
 ---
 
 ## Repository layout
 
 ```
-model_utils.py        shared core: crop_sky, predict, attribution
-slope_probe.joblib    the deployed model (513 parameters)
-labels.csv            one row per image, 8 columns
-slope_dataset/        179 images, {train,val}/{stable,unstable}/, pre-cropped
+model_utils.py        shared core: crop_sky, predict, the thresholds
+slope_probe.joblib    the deployed model
+labels.csv            one row per image
+slope_dataset/        {train,val}/{stable,unstable}/, stored pre-cropped
 
-backend/main.py       FastAPI — 6 routes, warmup thread, rate limiting
+backend/main.py       FastAPI — warmup lifespan, rate limiting, upload caps
 db.py                 prediction log (no images, no plaintext IPs)
-frontend/src/         React + Vite — App.jsx, api.js, 5 components
+frontend/src/         React + Vite
 android/              Kotlin + Jetpack Compose client
 
+dataset.py            the single dataset loader and feature cache
 train_probe.py        fits the deployed model
 train_model.py        retained ResNet18 baseline
 crop_dataset_sky.py   crop new images before training
 
-cross_validate.py     grouped k-fold — the trustworthy number
-frozen_features.py    backbone comparison
+frozen_features.py    backbone comparison; writes metrics.json
+cross_validate.py     grouped k-fold for the fine-tuned baseline
 audit_errors.py       per-image failure rates across seeds
 learning_curve.py     accuracy vs dataset size
 dupes.py              near-duplicate audit
 verify_dataset.py     invariant check
+check_gate.py         input-gate check: refuses nothing in the dataset
 ```
 
 ### Dataset
 
-179 images — 82 stable, 97 unstable. Train 65/75, val 17/22.
+Current counts are served by `/stats` and shown on the app's About page;
+`python verify_dataset.py` prints the same breakdown on the command line. They are
+not written here because they change every time an image is added.
 
-Indicators, eight categories:
+`labels.csv` columns: `filename, split, label, primary_indicator, confidence,
+source, site_id, notes`. The directory is the authority on split and label; the CSV
+carries everything else.
 
-| category | stable | unstable |
-|---|---:|---:|
-| `engineered` | 37 | — |
-| `bedrock` | 33 | — |
-| `vegetation` | 12 | — |
-| `erosion` | — | 37 |
-| `debris` | — | 20 |
-| `scarp` | — | 19 |
-| `displacement` | — | 13 |
-| `crack` | — | 8 |
-
-Collapsed from an earlier 29-category scheme in which 15 categories had three examples
-or fewer and several were the same feature under different names. **Note that no
-category straddles the stable/unstable boundary** — `primary_indicator` is a
-deterministic function of `label`, because the feature was named after the call was
-made. That is a real limitation of the labelling and is discussed under
+`primary_indicator` uses a small, deliberately coarse set of categories, collapsed
+from an earlier scheme in which most categories had three examples or fewer and
+several were the same feature under different names. **No category straddles the
+stable/unstable boundary** — `primary_indicator` is a deterministic function of
+`label`, because the feature was named after the call was made. That is a real
+limitation of the labelling, discussed under
 [Known limitations](#known-limitations).
-
-`labels.csv` columns: `filename, split, label, primary_indicator, confidence, source,
-site_id, notes`. The directory is the authority on split and label; the CSV carries
-everything else.
 
 ---
 
 ## Design decisions
 
-**The classifier is tiny on purpose.** 513 trained parameters, measured against a
-fine-tuned 8.4M-parameter baseline that performs worse. This is the project's result,
-not a shortcut around doing the work.
+**The classifier is tiny on purpose.** A few hundred trained parameters, measured
+against a fine-tuned 8.4M-parameter baseline that performs worse. This is the
+project's result, not a shortcut around doing the work.
 
 **Thresholds live on the server.** `POST /predict` returns both cutoffs, and every
 client derives its band from the numbers rather than string-matching the assessment
 prose. Rewording the copy cannot silently change how results are presented, and the
-web and Android apps cannot drift apart.
+web and Android apps cannot drift apart. `frozen_features.py` imports the same two
+constants, so the measurement follows the app rather than describing an older
+version of it.
 
-**The Android app is a thin client.** Running the pipeline on-device means converting
-two transformers to ONNX and reimplementing sigmoid calibration in Kotlin — and it
-would fork the thresholds across two codebases. A phone that quietly disagrees with
-the web app about the same photograph is worse than one that needs a network.
+**The Android app is a thin client.** Running the pipeline on-device means
+converting two transformers to ONNX and reimplementing sigmoid calibration in Kotlin
+— and it would fork the thresholds across two codebases. A phone that quietly
+disagrees with the web app about the same photograph is worse than one that needs a
+network.
 
-**No public contribution path.** The app analyses an image and discards it. Two things
-about a submitted photo cannot be determined automatically: its licence/provenance —
-not knowable from pixels, and a web form's "I own it" is unverifiable — and its true
-label. The label is the serious one. The only labels available are the model's own
-prediction, which feeds its documented shortcuts back into training while making the
-metrics look better, and an anonymous guess.
+**No public contribution path.** The app analyses an image and discards it. Two
+things about a submitted photo cannot be determined automatically: its
+licence/provenance — not knowable from pixels, and a web form's "I own it" is
+unverifiable — and its true label. The label is the serious one. The only labels
+available are the model's own prediction, which feeds its documented shortcuts back
+into training while making the metrics look better, and an anonymous guess.
 
-**The database stores no images and no plaintext IP addresses.** One row per analysis:
-probability, assessment, frame size. It exists to catch the probe drifting back toward
-the overconfidence that calibration corrected, which is visible without labels as mass
-piling into the outermost confidence bins. Rate limiting needs to recognise a repeat
-caller, not identify one, so only a salted hash is kept.
+**The database stores no images and no plaintext IP addresses.** One row per
+analysis: probability, assessment, frame size. It exists to catch the probe drifting
+back toward the overconfidence that calibration corrected, which is visible without
+labels as mass piling into the outermost confidence bins. Rate limiting needs to
+recognise a repeat caller, not identify one, so only a salted hash is kept.
 
-**Preprocessing is inspectable.** `crop_sky` is the step most likely to misfire on an
-unusual photo — a hazy skyline, a water-filled cut — and it is invisible in the
-result. `POST /cropped` makes it viewable, and the interface reports how much area was
-removed.
+**Preprocessing is inspectable.** `crop_sky` is the step most likely to misfire on
+an unusual photo — a hazy skyline, a water-filled cut — and it is invisible in the
+result. `POST /cropped` makes it viewable, and the interface reports how much area
+was removed.
 
 ---
 
 ## Known limitations
 
 **The indicator taxonomy is not independent of the label.** No category appears under
-both classes: `engineered*` is always stable, `erosion`/`scarp`/`debris`/`crack` always
-unstable. The feature was named because of the verdict, so the operational question is
-closer to "is this an engineered structure or an eroded surface?" than "is this slope
-failing?". This partly explains the semantic shortcut below — the label scheme rewards
-exactly the separation CLIP is good at. Fixing it needs indicator labels assigned blind
-to the class.
+both classes: engineered structures are always stable; erosion, scarps, debris and
+cracks are always unstable. The feature was named because of the verdict, so the
+operational question is closer to "is this an engineered structure or an eroded
+surface?" than "is this slope failing?". This partly explains the semantic shortcut
+below — the label scheme rewards exactly the separation CLIP is good at. Fixing it
+needs indicator labels assigned blind to the class.
 
 **It cannot see underground.** The most important one. Two slopes can look identical
 and behave completely differently.
 
-**The shortcut moved rather than vanished.** Under ResNet18 features the model treated
-bare rock texture as evidence of instability: `stable_rock` failed 50% of the time,
-`stable_cliff` 67%. CLIP features cut `stable_rock` to 9% — and raised `stable_cut`
-from 19% to **47%**.
+**The shortcut moved rather than vanished.** Under ResNet18 features the model
+treated bare rock texture as evidence of instability, failing badly on stable natural
+rock and cliffs. CLIP features largely fixed that class — and made engineered
+cuttings worse.
 
 CLIP separates "engineered cutting" from "natural cliff" more reliably than it
 separates failing ground from intact ground. The same geometry is visible directly in
-the embedding space: `stable_rock_011` sits at cosine **0.9453** from
-`unstable_cliff_016`, closer than most same-label pairs. The counterexamples that would
-break it are unstable engineered cuts and stable natural cliffs.
+the embedding space: some stable-rock and unstable-cliff images sit closer together
+than most same-label pairs. The counterexamples that would break it are unstable
+engineered cuts and stable natural cliffs, and those are the images worth collecting.
 
-**Accuracy is a range, not a number.** ±2.9 across folds. Earlier single-split figures
-in this project were optimistic by 8–10 points; that is why `cross_validate.py` and
-`frozen_features.py` exist and why a single held-out split is not quoted anywhere.
+Run `python audit_errors.py` for the current per-image picture and `python dupes.py`
+for the embedding-space one.
+
+**Accuracy is a range, not a number.** Earlier single-split figures in this project
+were optimistic by several points; that is why `cross_validate.py` and
+`frozen_features.py` exist, and why a single held-out split is not quoted anywhere.
 
 **Training was unseeded until it was fixed.** Six seeds on identical data produced
-recall gaps of 3.5–43.9 percentage points — noise exceeding every dataset-driven
-effect measured. All run-to-run comparisons predating the fix are meaningless.
-
-**The heatmap does not always concentrate.** On one debris-fan image the attribution
-performed *worse* than random. Diffuse indicators may have genuinely distributed
-evidence, or the map fails there. And faithful is not the same as correct: on images
-the model gets wrong, a faithful heatmap will faithfully show bad reasoning.
+recall gaps far exceeding every dataset-driven effect measured. All run-to-run
+comparisons predating the fix are meaningless.
 
 **Some dataset images lack licence provenance.** Several rows carry `source=unknown`
 in a public repository. Unresolved.
 
 **Indicator naming was attempted and rejected.** Telling the user *which* feature was
-spotted was tested three ways — zero-shot CLIP 40%, zero-shot with centering 38%,
-supervised head 41% ± 8 — against a 40% majority-class baseline. Not shippable. The
-cause is data: per-indicator counts run as low as 3, and roughly 30–50 per class would
-be needed.
+spotted was tested three ways — zero-shot CLIP, zero-shot with centering, and a
+supervised head — and none beat the majority-class baseline by a usable margin. Not
+shippable. The cause is data: per-indicator counts run as low as three, and roughly
+30–50 per class would be needed.
 
 ---
 
@@ -423,5 +432,5 @@ Dataset images are drawn from field photography and Wikimedia Commons (CC BY-SA 
 compatible licences), recorded per image in the `source` column of `labels.csv`.
 
 Pretrained models: [CLIP](https://github.com/openai/CLIP) (OpenAI) and
-[SegFormer](https://huggingface.co/nvidia/segformer-b0-finetuned-ade-512-512) (NVIDIA,
-ADE20K).
+[SegFormer](https://huggingface.co/nvidia/segformer-b0-finetuned-ade-512-512)
+(NVIDIA, ADE20K).

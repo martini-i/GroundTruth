@@ -87,7 +87,7 @@ behind TLS is a prerequisite for shipping, not an optional extra.
 ```
 data/
   Models.kt      Prediction, Band, typed ApiError
-  Api.kt         OkHttp client over /health /predict /cropped /gradcam
+  Api.kt         OkHttp client over /health /predict /cropped
   Settings.kt    DataStore-backed server address
 util/
   ImagePrep.kt   downscale + EXIF rotation before upload

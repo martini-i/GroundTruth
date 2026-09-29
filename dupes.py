@@ -27,19 +27,18 @@ from dataset import CACHE_DIR, dataset_paths, index_key
 
 
 # Above this cosine, two images are near-certainly the same scene. Measured on
-# the 179-image dataset: with the one true duplicate removed, the highest
-# similarity between any two distinct images is 0.9518, so 0.96 sits clearly
-# above the noise floor and does not fire on merely similar terrain.
+# this dataset: with true duplicates removed, the highest similarity between any
+# two distinct images sits just under 0.96, so the threshold is clearly above
+# the noise floor and does not fire on merely similar terrain. Re-check it after
+# a large batch of new images — the noise floor rises as the dataset grows.
 NEAR_DUPLICATE = 0.96
 
 # Between this and NEAR_DUPLICATE, a pair is worth a human glance — but treat
-# the band as weak evidence. At 0.93 it surfaces 8 pairs of which 3 straddle the
-# stable/unstable boundary; at 0.90 it surfaces 32 of which 9 do. CLIP puts
-# stable_rock_011 and unstable_cliff_016 at 0.9453, higher than most same-label
-# pairs, because in this range the similarity is reporting "both are rock faces"
-# rather than "both are the same place" — the same semantic shortcut FINDINGS.md
-# documents in the classifier itself. Set here so the list stays short enough to
-# actually review.
+# the band as weak evidence. Some of the pairs it surfaces straddle the
+# stable/unstable boundary: in this range the similarity is reporting "both are
+# rock faces" rather than "both are the same place", which is the same semantic
+# shortcut the classifier itself is prone to. Set here so the list stays short
+# enough to actually review.
 SAME_SITE_HINT = 0.93
 
 
@@ -50,7 +49,7 @@ def _embed_paths(paths: list[Path]) -> np.ndarray:
     out = []
     for p in paths:
         img = Image.open(p).convert("RGB")
-        emb, _ = model_utils._clip_embedding(img)
+        emb = model_utils._clip_embedding(img)
         out.append(emb.cpu().numpy().squeeze(0))
     return np.stack(out)
 

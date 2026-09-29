@@ -18,13 +18,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** Which long-running call is in flight, so only one spinner shows at a time. */
-enum class Busy { PREPARING, ANALYZING, CROPPING, HEATMAP }
+enum class Busy { PREPARING, ANALYZING, CROPPING }
 
 data class UiState(
     val imageUri: Uri? = null,
     val prediction: Prediction? = null,
     val croppedJpeg: ByteArray? = null,
-    val heatmapPng: ByteArray? = null,
     val busy: Busy? = null,
     val error: String? = null,
     val serverUrl: String = "",
@@ -32,9 +31,9 @@ data class UiState(
     val modelsReady: Boolean? = null,
     val serverReachable: Boolean? = null,
 ) {
-    // ByteArray fields make the generated equals() reference-based, which would
+    // The ByteArray field makes the generated equals() reference-based, which would
     // make Compose re-render on every emission. Compared by identity deliberately;
-    // the arrays are replaced wholesale, never mutated in place.
+    // the array is replaced wholesale, never mutated in place.
     override fun equals(other: Any?): Boolean = this === other
     override fun hashCode(): Int = System.identityHashCode(this)
 }
@@ -109,7 +108,6 @@ class AnalyzeViewModel(app: Application) : AndroidViewModel(app) {
             imageUri = uri,
             prediction = null,
             croppedJpeg = null,
-            heatmapPng = null,
             error = null,
         )
         analyze()
@@ -120,7 +118,6 @@ class AnalyzeViewModel(app: Application) : AndroidViewModel(app) {
             imageUri = null,
             prediction = null,
             croppedJpeg = null,
-            heatmapPng = null,
             error = null,
         )
     }
@@ -138,12 +135,8 @@ class AnalyzeViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(croppedJpeg = api.cropped(jpeg))
     }
 
-    fun showHeatmap() = run(Busy.HEATMAP) { jpeg ->
-        _state.value = _state.value.copy(heatmapPng = api.heatmap(jpeg))
-    }
-
     /**
-     * Shared shape for the three server calls: prepare the JPEG once, run the
+     * Shared shape for the server calls: prepare the JPEG once, run the
      * call, and turn any failure into a message a person can act on.
      */
     private fun run(phase: Busy, block: suspend (ByteArray) -> Unit) {

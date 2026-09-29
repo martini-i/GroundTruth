@@ -328,11 +328,11 @@ export default function App() {
                 </>
               )}
               {croppedUrl && (
-                <div className="gradcam-panel">
+                <div className="crop-panel">
                   <h3>What the model sees</h3>
                   <img src={croppedUrl} alt="The photo after sky and water removal"
-                       className="gradcam-image" />
-                  <p className="gradcam-hint">
+                       className="crop-image" />
+                  <p className="crop-hint">
                     Sky and open water are removed before analysis so the classifier reads the
                     ground, not the weather. If this crop lost the slope itself, treat the result
                     with suspicion.

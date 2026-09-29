@@ -2,9 +2,10 @@
 train_probe.py — Fit the deployed classifier: a calibrated linear probe on
 frozen CLIP image features.
 
-Replaces fine-tuning as the production model. Grouped 5-fold cross-validation
-put the frozen CLIP probe at 81.0% +/- 1.1 (10 seeds) vs 66.5% +/- 9.6 for the fine-tuned
-ResNet18 (FINDINGS.md section 5), training 513 parameters instead of ~8.4M.
+Replaces fine-tuning as the production model: grouped cross-validation put the
+frozen CLIP probe well ahead of the fine-tuned ResNet18 baseline while training
+three orders of magnitude fewer parameters. Current measured figures are in
+metrics.json, written by frozen_features.py.
 
 Two details that are easy to get wrong:
 
@@ -14,10 +15,11 @@ Two details that are easy to get wrong:
    crops a raw upload exactly once — a train/inference mismatch.
 
 2. **Probabilities are calibrated.** A plain logistic regression on separable
-   CLIP features is wildly overconfident: 68% of held-out predictions land
-   above 95% or below 5%, and the most confident "stable" bin was actually
-   18.5% unstable. Calibration is fitted on grouped held-out folds (never on
-   the same data the base model saw) so the reported confidence tracks reality.
+   CLIP features is wildly overconfident — most held-out predictions land
+   above 95% or below 5%, and the most confident "stable" bin still contained a
+   sizeable share of unstable images. Calibration is fitted on grouped held-out
+   folds (never on the same data the base model saw) so the reported confidence
+   tracks reality.
 
 Writes slope_probe.joblib for model_utils.py to load.
 
@@ -60,18 +62,9 @@ def main():
     calibrated = CalibratedClassifierCV(base, method="sigmoid", cv=splits)
     calibrated.fit(feats, labels)
 
-    # A separate uncalibrated fit on all data supplies the linear direction used
-    # for the heatmap. Calibration is monotonic, so it cannot change which
-    # regions push a prediction toward unstable — only the reported number.
-    scaler = StandardScaler().fit(feats)
-    linear = LogisticRegression(max_iter=5000, class_weight="balanced", C=1.0)
-    linear.fit(scaler.transform(feats), labels)
-
     p = calibrated.predict_proba(feats)[:, 1]
     joblib.dump({
         "calibrated": calibrated,
-        "scaler": scaler,
-        "clf": linear,
         "class_names": CLASS_NAMES,
         "clip_id": CLIP_ID,
         "n_train": len(paths),

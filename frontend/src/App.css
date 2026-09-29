@@ -445,7 +445,7 @@ blockquote {
 }
 
 .confidence-bars,
-.gradcam-panel {
+.crop-panel {
   background: var(--bg-panel-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -455,7 +455,7 @@ blockquote {
 
 .confidence-bars h3,
 .assessment-card h3,
-.gradcam-panel h3 {
+.crop-panel h3 {
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -561,40 +561,13 @@ blockquote {
   color: var(--text);
 }
 
-.gradcam-image {
+.crop-image {
   max-width: 100%;
   border-radius: var(--radius-sm);
   display: block;
 }
 
-.gradcam-legend {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.7rem;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
-/* Mirrors OpenCV's COLORMAP_JET, which is what show_cam_on_image renders with —
-   a generic blue-to-red ramp would mislabel the green/yellow mid-range. */
-.gradcam-scale {
-  flex: 1;
-  height: 8px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    #00007f,
-    #0000ff,
-    #00ffff,
-    #7fff7f,
-    #ffff00,
-    #ff0000,
-    #7f0000
-  );
-}
-
-.gradcam-hint {
+.crop-hint {
   font-size: 0.75rem;
   color: var(--text-muted);
   margin: 0.5rem 0 0;

@@ -43,7 +43,7 @@ export default function About() {
                 </>
               ) : failed ? "—" : "…"}
             </span>
-            <span className="stat-label">accuracy, 5-fold grouped cross-validation</span>
+            <span className="stat-label">accuracy, grouped cross-validation</span>
           </div>
           <div className="stat">
             <span className="stat-value">{d ? d.total : failed ? "—" : "…"}</span>
@@ -56,6 +56,29 @@ export default function About() {
             <span className="stat-label">stable / unstable</span>
           </div>
         </div>
+        {m?.deployed?.unstable_recall != null && (
+          <div className="stat-row">
+            <div className="stat">
+              <span className="stat-value">{Math.round(m.deployed.unstable_recall)}%</span>
+              <span className="stat-label">
+                unstable slopes caught, at the threshold this app actually flags at
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-value">{Math.round(m.deployed.unstable_precision)}%</span>
+              <span className="stat-label">of flagged slopes are genuinely unstable</span>
+            </div>
+            <div className="stat">
+              <span className="stat-value">{Math.round(m.deployed.borderline_rate)}%</span>
+              <span className="stat-label">land in the borderline band</span>
+            </div>
+          </div>
+        )}
+        <p className="page-note">
+          The first figure is accuracy at the even 50% split, which is what makes it comparable with
+          other models. The row below it is the operating point you get: flagging starts well below
+          50%, which catches more unstable slopes at the cost of more false alarms.
+        </p>
         <p className="page-note">
           Folds are split by site, so photographs of the same location never appear on both sides of a
           split. Without that, near-duplicate images inflate the score.

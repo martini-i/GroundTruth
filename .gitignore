@@ -13,7 +13,7 @@ gradcam_output/
 
 # Run logs and analysis artifacts — findings are consolidated into FINDINGS.md
 *.log
-audit_errors.csv
+audit_errors_*.csv
 
 # Python
 __pycache__/
@@ -39,7 +39,6 @@ FINDINGS.md
 
 # Feature cache and analysis artifacts
 .feature_cache/
-audit_errors_clip.csv
 
 # Prediction log. Runtime state, not source; no image data is stored in it.
 groundtruth.db

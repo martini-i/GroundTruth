@@ -24,9 +24,9 @@ import java.util.concurrent.TimeUnit
  */
 class Api(private val baseUrlProvider: () -> String) {
 
-    // Analysis runs a CLIP forward pass and the heatmap tiles ten of them, so the
-    // read timeout is generous. Connect stays short: an unreachable server should
-    // fail fast enough to feel like an answer, not a hang.
+    // Analysis runs a CLIP forward pass on the server, so the read timeout is
+    // generous. Connect stays short: an unreachable server should fail fast
+    // enough to feel like an answer, not a hang.
     private val client = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
@@ -110,12 +110,6 @@ class Api(private val baseUrlProvider: () -> String) {
     /** The photo as the classifier receives it, after sky and water removal. */
     suspend fun cropped(jpeg: ByteArray): ByteArray {
         val request = Request.Builder().url(url("/cropped")).post(imagePart(jpeg)).build()
-        return call(request) { it.body!!.bytes() }
-    }
-
-    /** Patch-token attribution overlay. Costs roughly 2.5s server-side. */
-    suspend fun heatmap(jpeg: ByteArray): ByteArray {
-        val request = Request.Builder().url(url("/gradcam")).post(imagePart(jpeg)).build()
         return call(request) { it.body!!.bytes() }
     }
 }
