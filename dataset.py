@@ -20,7 +20,17 @@ CLASS_NAMES = ["stable", "unstable"]
 DATASET_DIR = Path("slope_dataset")
 LABELS_CSV = Path("labels.csv")
 CACHE_DIR = Path(".feature_cache")
-CLIP_ID = "openai/clip-vit-base-patch32"
+CLIP_ID = "openai/clip-vit-large-patch14"
+
+# Average each embedding with its horizontal mirror. A slope is not left/right
+# oriented, so a mirrored photograph is a photograph of the same slope and the
+# label is genuinely invariant. Vertical flips and rotations are not: "which way
+# is downhill" is the entire subject.
+#
+# This MUST match inference. model_utils reads the flag back out of the fitted
+# probe rather than keeping its own copy, so the two cannot drift — the same
+# reasoning as the crop-symmetry invariant.
+CLIP_TTA = True
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 
 
@@ -92,7 +102,13 @@ def clip_features(paths, use_cache: bool = True, progress_every: int = 40) -> np
     a raw upload exactly once.
     """
     CACHE_DIR.mkdir(exist_ok=True)
-    cache = CACHE_DIR / f"clip_{len(paths)}_{index_key(paths)}.npy"
+    # The backbone and the TTA setting are part of the key, not just the file
+    # list. Without them, switching CLIP_ID silently returns the previous
+    # backbone's features for the new configuration: same shape where the dims
+    # happen to match, no error, and every downstream number quietly wrong.
+    # That is invariant 3 again, one level up from the file list.
+    tag = CLIP_ID.rsplit("/", 1)[-1] + ("_tta" if CLIP_TTA else "")
+    cache = CACHE_DIR / f"clip_{tag}_{len(paths)}_{index_key(paths)}.npy"
     if use_cache and cache.exists():
         return np.load(cache)
 
@@ -100,12 +116,19 @@ def clip_features(paths, use_cache: bool = True, progress_every: int = 40) -> np
 
     proc = AutoImageProcessor.from_pretrained(CLIP_ID)
     model = CLIPModel.from_pretrained(CLIP_ID).eval()
+    def embed(img):
+        inputs = proc(images=img, return_tensors="pt")
+        vis = model.vision_model(pixel_values=inputs["pixel_values"])
+        return model.visual_projection(vis.pooler_output).squeeze(0)
+
     feats = []
     with torch.no_grad():
         for i, p in enumerate(paths, 1):
-            inputs = proc(images=Image.open(p).convert("RGB"), return_tensors="pt")
-            vis = model.vision_model(pixel_values=inputs["pixel_values"])
-            feats.append(model.visual_projection(vis.pooler_output).squeeze(0).numpy())
+            img = Image.open(p).convert("RGB")
+            f = embed(img)
+            if CLIP_TTA:
+                f = (f + embed(img.transpose(Image.FLIP_LEFT_RIGHT))) / 2
+            feats.append(f.numpy())
             if progress_every and i % progress_every == 0:
                 print(f"  {i}/{len(paths)}", flush=True)
     feats = np.stack(feats)

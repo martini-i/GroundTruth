@@ -13,8 +13,8 @@ of the same location never land in different folds. Without that, the model woul
 be scored on an image near-identical to one it trained on, inflating the result.
 Rows with no site_id are treated as their own group.
 
-NOTE: the hyperparameters below intentionally mirror train_model.py. If you change
-one there, change it here too, or the two stop being comparable.
+NOTE: the hyperparameters below are the fine-tuning baseline this project
+compares against. Changing them changes what the comparison means.
 
 Usage:
     python cross_validate.py                  # 5 folds, seed 42
@@ -37,7 +37,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Dataset
 from torchvision import models, transforms
 
-# ===== CONFIG (mirrors train_model.py) =====
+# ===== CONFIG (the fine-tuned baseline) =====
 # load_index/CLASS_NAMES are re-exported so audit_errors.py and learning_curve.py
 # can keep reaching them through this module.
 from dataset import CLASS_NAMES, load_index  # noqa: F401

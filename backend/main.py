@@ -156,12 +156,19 @@ def stats():
 
     root = Path(__file__).resolve().parent.parent
     counts, indicators = Counter(), Counter()
+    unclassified = 0
     try:
         with open(root / "labels.csv", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 counts[row["label"]] += 1
                 if row.get("primary_indicator"):
                     indicators[row["primary_indicator"]] += 1
+                else:
+                    # Counted, not silently dropped. Images awaiting a blind
+                    # indicator assignment have no category yet; skipping them
+                    # made the indicator chips sum to less than the stated
+                    # image total, so the About page contradicted itself.
+                    unclassified += 1
     except FileNotFoundError:
         pass
 
@@ -192,6 +199,7 @@ def stats():
             "stable": counts.get("stable", 0),
             "unstable": counts.get("unstable", 0),
             "top_indicators": indicators.most_common(8),
+            "unclassified": unclassified,
         },
         "model": probe_info,
         "thresholds": {
@@ -213,6 +221,16 @@ def predict(request: Request, file: UploadFile = File(...)):
     # neither client can accidentally render a band for a prediction that was
     # never made.
     if not result.get("assessable", True):
+        # Record it before raising. The gate's thresholds are supposed to be
+        # tuned on evidence, and they cannot be if refusals leave no trace.
+        try:
+            db.log_refusal(
+                reason=result["reason"],
+                width=image.width, height=image.height,
+                client_fp=fp,
+            )
+        except Exception:
+            pass        # logging must never change the response
         raise HTTPException(status_code=422, detail=result["message"])
 
     try:
@@ -239,7 +257,11 @@ def monitoring(x_admin_token: str | None = Header(default=None)):
     piling into the outermost bins.
     """
     _require_admin(x_admin_token)
-    return {"served": db.counts(), "confidence_bins": db.calibration_summary()}
+    return {
+        "served": db.counts(),
+        "confidence_bins": db.calibration_summary(),
+        "refusals": db.refusal_summary(),
+    }
 
 
 @app.post("/cropped")

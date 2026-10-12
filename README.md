@@ -1,5 +1,7 @@
 # GroundTruth
 
+[![checks](https://github.com/martini-i/GroundTruth/actions/workflows/checks.yml/badge.svg)](https://github.com/martini-i/GroundTruth/actions/workflows/checks.yml)
+
 **Slope Surface Indicator Classifier** — a CSUF independent-study research project.
 
 GroundTruth reads a ground-level photograph of a slope and reports whether visible
@@ -84,7 +86,9 @@ file's size and modification time — never on the number of files. A count-keye
 cache returns feature rows belonging to a previous set of images, which still line
 up positionally against the new labels.
 
-Run `python verify_dataset.py` before trusting any number. It catches what it can.
+Run `python verify_dataset.py` before trusting any number, and `python -m pytest`
+for the rest. Both run in CI on every push, so an invariant cannot quietly break
+between one measurement and the next — which is how each of them broke before.
 
 ---
 

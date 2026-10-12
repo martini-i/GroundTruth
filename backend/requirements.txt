@@ -1,6 +1,6 @@
 # Runtime dependencies for the FastAPI backend + model inference.
-# Does NOT include dev-only tools (matplotlib, used by train_model.py) — those
-# stay in the root requirements.txt for local training and analysis work.
+# Does NOT include the training-only analysis stack (scikit-learn is needed at
+# runtime for the probe; everything else stays in the root requirements.txt).
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9

@@ -52,6 +52,25 @@ CREATE TABLE IF NOT EXISTS predictions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_predictions_created ON predictions(created_at);
+
+-- Refused uploads. A separate table rather than a null-probability row in
+-- predictions: a refusal is a different event, with no probability to record,
+-- and predictions.p_unstable is NOT NULL by design.
+--
+-- This exists so the input gate's thresholds can be tuned on evidence. Without
+-- it the only refusal data is whatever a user happens to report, and a gate
+-- that is quietly rejecting real slopes looks identical to one that is working.
+CREATE TABLE IF NOT EXISTS refusals (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at   TEXT NOT NULL,
+    reason       TEXT NOT NULL,
+    width        INTEGER,
+    height       INTEGER,
+    client_fp    TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_refusals_created ON refusals(created_at);
+CREATE INDEX IF NOT EXISTS idx_refusals_reason ON refusals(reason);
 """
 
 # Indexes over columns that arrive via _MIGRATIONS. These cannot live in SCHEMA:
@@ -159,6 +178,40 @@ def log_prediction(p_unstable: float, assessment: str, sky_cropped: float,
                VALUES (?,?,?,?,?,?,?)""",
             (_now(), p_unstable, assessment, sky_cropped, width, height, client_fp),
         )
+
+
+def log_refusal(reason: str, width: int, height: int,
+                client_fp: str | None = None, db_path: Path | None = None) -> None:
+    """Record that the input gate declined an image, and why."""
+    init(db_path)
+    with connect(db_path) as conn:
+        conn.execute(
+            """INSERT INTO refusals (created_at, reason, width, height, client_fp)
+               VALUES (?,?,?,?,?)""",
+            (_now(), reason, width, height, client_fp),
+        )
+
+
+def refusal_summary(db_path: Path | None = None) -> dict:
+    """
+    How often the gate fires, and on what.
+
+    The useful reading is the ratio: a refusal rate that climbs, or one reason
+    dominating, means a threshold is mistuned rather than that users suddenly
+    started photographing their carpets.
+    """
+    init(db_path)
+    with connect(db_path) as conn:
+        total = conn.execute("SELECT COUNT(*) AS n FROM refusals").fetchone()["n"]
+        by_reason = {
+            r["reason"]: r["n"]
+            for r in conn.execute(
+                "SELECT reason, COUNT(*) AS n FROM refusals GROUP BY reason ORDER BY n DESC"
+            )
+        }
+        served = conn.execute("SELECT COUNT(*) AS n FROM predictions").fetchone()["n"]
+    rate = total / (total + served) * 100 if (total + served) else 0.0
+    return {"refused": total, "by_reason": by_reason, "refusal_rate_pct": round(rate, 1)}
 
 
 def counts(db_path: Path | None = None) -> dict:

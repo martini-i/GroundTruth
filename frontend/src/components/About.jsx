@@ -95,7 +95,20 @@ export default function About() {
                 <em>{count}</em>
               </span>
             ))}
+            {d.unclassified > 0 && (
+              <span className="tag" key="unclassified">
+                not yet categorised
+                <em>{d.unclassified}</em>
+              </span>
+            )}
           </div>
+          {d.unclassified > 0 && (
+            <p className="page-note">
+              Recently added images have no indicator category until it is assigned blind to
+              the stable/unstable call — so the counts above sum to the dataset total only
+              once that pass is done.
+            </p>
+          )}
         </section>
       )}
 

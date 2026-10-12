@@ -1,0 +1,168 @@
+name: checks
+
+# This project's characteristic failures are silent: a dataset row that drifts
+# from disk, a probe fitted on different framing from the one served, a feature
+# cache keyed so loosely it returns the previous backbone's rows. None of them
+# raise. They just make every downstream number quietly wrong.
+#
+# So CI here is not about unit tests, which the project does not have. It runs
+# the invariant checks that already exist and gate the analysis by hand, plus
+# the builds that would otherwise only be discovered broken at demo time.
+#
+# Cost note: the repository carries ~224 MB of images, so checkout dominates
+# every job. Jobs that do not need the dataset use a sparse checkout, and the
+# ones that download model weights are scheduled rather than run per push.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, for the jobs too slow to gate a push on.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  # ---------------------------------------------------------------- fast gate
+  dataset:
+    name: dataset invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # verify_dataset.py is pure stdlib by design, so this needs no install.
+      # It checks the three things that fail silently: labels.csv 1:1 with
+      # disk, no duplicate filenames, no site_id spanning a split.
+      - name: verify dataset
+        run: python verify_dataset.py
+
+  # ----------------------------------------------------------------- tests
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The invariant tests use synthetic masks, so no images are needed.
+          sparse-checkout: |
+            *.py
+            tests
+            requirements.txt
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      # No model weights involved: both crop_sky and check_assessable accept a
+      # precomputed segmentation, so the whole invariant surface runs in
+      # seconds. The deployed-config test skips when no probe is checked out.
+      - run: python -m pytest tests/ -q
+
+  # -------------------------------------------------------- imports and syntax
+  python:
+    name: python imports
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # No images needed to import modules.
+          sparse-checkout: |
+            *.py
+            backend
+            requirements.txt
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: install
+        run: |
+          pip install -r requirements.txt
+          pip install -r backend/requirements.txt
+      # Catches the class of bug that actually occurred: a module importing a
+      # package absent from requirements.txt, and syntax damage from scripted
+      # edits. Importing is enough -- argparse modules exit, which is fine.
+      - name: import every module
+        run: |
+          python - <<'PY'
+          import importlib, pathlib, sys
+          failed = []
+          for f in sorted(pathlib.Path('.').glob('*.py')):
+              name = f.stem
+              try:
+                  importlib.import_module(name)
+                  print(f'  ok       {name}')
+              except SystemExit:
+                  print(f'  ok       {name} (argparse exit)')
+              except Exception as exc:
+                  print(f'  FAILED   {name}: {type(exc).__name__}: {exc}')
+                  failed.append(name)
+          sys.exit(1 if failed else 0)
+          PY
+      - name: backend imports
+        run: python -c "import sys; sys.path.insert(0, '.'); import backend.main"
+
+  # ------------------------------------------------------------------ frontend
+  frontend:
+    name: frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: frontend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run lint
+      - run: npm --prefix frontend run build
+
+  # ------------------------------------------------------------------- android
+  # Slower, and the Android client changes rarely. Scheduled and manual only,
+  # so it does not sit in front of every push.
+  android:
+    name: android build
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: android
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: assembleDebug
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+  # ---------------------------------------------------------------- input gate
+  # Downloads SegFormer and runs the gate over every dataset image, so it is
+  # minutes rather than seconds. A refusal here means a threshold in
+  # model_utils is mistuned and real slope photographs would be turned away.
+  gate:
+    name: input gate
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: cache hugging face weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ runner.os }}-segformer-b0
+      - name: gate must refuse nothing in the dataset
+        env:
+          HF_HUB_DISABLE_SYMLINKS_WARNING: "1"
+        run: python check_gate.py

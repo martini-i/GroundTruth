@@ -31,13 +31,8 @@ from pathlib import Path
 
 import joblib
 import numpy as np
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedGroupKFold
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-
-from dataset import CLASS_NAMES, CLIP_ID, clip_features, load_index
+import probe as P
+from dataset import CLASS_NAMES, CLIP_ID, CLIP_TTA, clip_features, load_index
 
 OUT = Path("slope_probe.joblib")
 SEED = 42
@@ -50,23 +45,19 @@ def main():
     feats = clip_features(paths)
     print(f"features {feats.shape}")
 
-    base = make_pipeline(
-        StandardScaler(),
-        LogisticRegression(max_iter=5000, class_weight="balanced", C=1.0),
-    )
-
-    # Calibrate on grouped held-out folds so same-site photos never sit on both
-    # sides of a calibration split.
-    splits = list(StratifiedGroupKFold(n_splits=5, shuffle=True,
-                                       random_state=SEED).split(feats, labels, groups))
-    calibrated = CalibratedClassifierCV(base, method="sigmoid", cv=splits)
-    calibrated.fit(feats, labels)
+    # One implementation of the fit, shared with the evaluator (probe.py), so
+    # the measurement and the deployed model cannot disagree about it.
+    calibrated = P.fit_probe(feats, labels, groups)
 
     p = calibrated.predict_proba(feats)[:, 1]
     joblib.dump({
         "calibrated": calibrated,
         "class_names": CLASS_NAMES,
         "clip_id": CLIP_ID,
+        # Recorded, not assumed: model_utils reads this back rather than
+        # keeping its own copy, so inference cannot apply a different
+        # augmentation from the one the probe was fitted on.
+        "tta": CLIP_TTA,
         "n_train": len(paths),
         "seed": SEED,
     }, OUT)

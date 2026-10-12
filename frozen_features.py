@@ -8,7 +8,7 @@ extracted once and cached, so evaluating a backbone takes seconds rather than
 the tens of minutes a fine-tuning cross-validation run costs.
 
 Backbones:
-    resnet18   ImageNet supervised, 512-d   — same features train_model.py starts from
+    resnet18   ImageNet supervised, 512-d   — the conventional starting point
     dinov2     DINOv2 ViT-S/14, 384-d       — self-supervised, far broader pretraining
     clip       CLIP ViT-B/32, 512-d         — image-text pretraining
 
@@ -46,6 +46,7 @@ from PIL import Image
 
 import cross_validate as cv
 import model_utils
+import probe as P
 from dataset import index_key
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -66,6 +67,12 @@ parser.add_argument("--folds", type=int, default=5)
 parser.add_argument("--seeds", type=int, nargs="+", default=DEFAULT_SEEDS,
                     help="fold seeds to average over; one seed is a lottery ticket")
 parser.add_argument("--no-cache", action="store_true")
+parser.add_argument("--C", type=float, default=0.01,
+                    help="inverse regularisation strength for the probe")
+parser.add_argument("--calibration", default="sigmoid", choices=["sigmoid","isotonic"])
+parser.add_argument("--tta", action="store_true",
+                    help="average each embedding with its horizontal mirror. A slope is "
+                         "not left/right oriented, so the label is invariant to that flip")
 args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -101,36 +108,68 @@ def extract_hf(paths, model_id, pool):
         model = CLIPModel.from_pretrained(model_id).eval().to(device)
     else:
         model = AutoModel.from_pretrained(model_id).eval().to(device)
+
+    def embed(img):
+        inputs = proc(images=img, return_tensors="pt").to(device)
+        if pool == "clip":
+            # transformers 5.x returns a model output here, not a tensor, so
+            # take the pooled vision output and apply CLIP's own projection
+            # to land in the canonical image-embedding space.
+            vis = model.vision_model(pixel_values=inputs["pixel_values"])
+            return model.visual_projection(vis.pooler_output).squeeze(0)
+        # DINOv2: the CLS token is the standard image-level descriptor.
+        return model(**inputs).last_hidden_state[:, 0].squeeze(0)
+
     out = []
     with torch.no_grad():
         for i, p in enumerate(paths, 1):
             img = Image.open(p).convert("RGB")
-            inputs = proc(images=img, return_tensors="pt").to(device)
-            if pool == "clip":
-                # transformers 5.x returns a model output here, not a tensor, so
-                # take the pooled vision output and apply CLIP's own projection
-                # to land in the canonical 512-d image-embedding space.
-                vis = model.vision_model(pixel_values=inputs["pixel_values"])
-                feat = model.visual_projection(vis.pooler_output).squeeze(0)
-            else:
-                # DINOv2: the CLS token is the standard image-level descriptor.
-                feat = model(**inputs).last_hidden_state[:, 0].squeeze(0)
+            feat = embed(img)
+            if args.tta:
+                # Horizontal flip only. A slope is not left/right oriented, so a
+                # mirrored photograph is a photograph of the same slope — the
+                # label is genuinely invariant. Vertical flips and rotations are
+                # not: "which way is downhill" is the whole subject, so they
+                # would manufacture images that cannot occur.
+                feat = (feat + embed(img.transpose(Image.FLIP_LEFT_RIGHT))) / 2
             out.append(feat.cpu().numpy())
             if i % 40 == 0:
                 print(f"    {i}/{len(paths)}", flush=True)
     return np.stack(out)
 
 
+def extract_concat(paths, parts):
+    """
+    Concatenate several backbones' features for one image.
+
+    Tests whether the representations are complementary or merely redundant:
+    image-text pretraining and self-supervised pretraining describe a slope
+    differently, so their union may separate what neither does alone. Each part
+    is standardised inside the fold anyway, so differing scales are harmless.
+    """
+    mats = [get_features(part, paths) for part in parts]
+    return np.concatenate(mats, axis=1)
+
+
 EXTRACTORS = {
     "resnet18": lambda p: extract_resnet18(p),
     "dinov2": lambda p: extract_hf(p, "facebook/dinov2-small", "cls"),
     "clip": lambda p: extract_hf(p, "openai/clip-vit-base-patch32", "clip"),
+    # Same family as `clip`, one rung up. The backbone ladder is this project's
+    # central finding, so the obvious question is whether it keeps climbing.
+    "clip-large": lambda p: extract_hf(p, "openai/clip-vit-large-patch14", "clip"),
+    "dinov2-base": lambda p: extract_hf(p, "facebook/dinov2-base", "cls"),
+    "clip+dinov2": lambda p: extract_concat(p, ["clip", "dinov2"]),
+    "clip-large+dinov2": lambda p: extract_concat(p, ["clip-large", "dinov2"]),
 }
 
 
 def get_features(name, paths):
     CACHE_DIR.mkdir(exist_ok=True)
-    cache = CACHE_DIR / f"{name}_{len(paths)}_{index_key(paths)}.npy"
+    # TTA features are a different representation of the same files, so they
+    # need their own cache slot or the two silently overwrite each other.
+    suffix = "_tta" if args.tta else ""
+    cache = CACHE_DIR / f"{name}{suffix}_{len(paths)}_{index_key(paths)}.npy"
     if cache.exists() and not args.no_cache:
         feats = np.load(cache)
         print(f"  {name}: loaded cached features {feats.shape}")
@@ -140,21 +179,6 @@ def get_features(name, paths):
     np.save(cache, feats)
     print(f"  {name}: extracted {feats.shape} -> cached")
     return feats
-
-
-def _inner_splits(y, g, max_splits=5):
-    """
-    Grouped calibration folds inside one training fold.
-
-    Calibration has to be fitted on data the base model did not see, and the
-    split has to respect site groups for the same reason the outer one does.
-    The fold count is reduced if the minority class has too few groups to fill
-    max_splits, which happens on small training portions.
-    """
-    per_class = min(len(set(g[y == c])) for c in (0, 1))
-    n = max(2, min(max_splits, per_class))
-    return list(StratifiedGroupKFold(n_splits=n, shuffle=True,
-                                     random_state=0).split(np.zeros(len(y)), y, g))
 
 
 def evaluate(feats, labels, groups):
@@ -190,15 +214,8 @@ def evaluate(feats, labels, groups):
         for tr, va in splitter.split(feats, labels, groups):
             assert not (set(groups[tr]) & set(groups[va])), "group leak"
 
-            base = make_pipeline(
-                StandardScaler(),
-                LogisticRegression(max_iter=5000, class_weight="balanced", C=1.0),
-            )
-            model = CalibratedClassifierCV(
-                base, method="sigmoid",
-                cv=_inner_splits(labels[tr], groups[tr]),
-            )
-            model.fit(feats[tr], labels[tr])
+            model = P.fit_probe(feats[tr], labels[tr], groups[tr],
+                                C=args.C, method=args.calibration)
 
             y = labels[va]
             p = model.predict_proba(feats[va])[:, 1]
@@ -263,17 +280,43 @@ def main():
     # Only a full-strength run may write it. A quick exploratory run with a
     # couple of seeds would otherwise overwrite the public figure with a
     # lower-confidence estimate, silently and with no indication in the app.
-    full_strength = args.seeds == DEFAULT_SEEDS and not args.no_cache
-    clip = results.get("clip")
-    if clip is not None and not full_strength:
+    # --tta is excluded deliberately: the deployed pipeline does not do TTA, so
+    # publishing a TTA figure would report an accuracy the app cannot deliver.
+    # metrics.json must describe the DEPLOYED pipeline, so publish only the row
+    # whose backbone and augmentation match what dataset.py actually fits. The
+    # old version always published the row named "clip", which would quietly
+    # report one model's accuracy while the app served another.
+    from dataset import CLIP_ID, CLIP_TTA
+    deployed_name = {
+        "openai/clip-vit-base-patch32": "clip",
+        "openai/clip-vit-large-patch14": "clip-large",
+    }.get(CLIP_ID)
+
+    reasons = []
+    if args.seeds != DEFAULT_SEEDS:
+        reasons.append(f"needs the default {len(DEFAULT_SEEDS)} seeds (got {len(args.seeds)})")
+    if args.no_cache:
+        reasons.append("--no-cache runs are exploratory")
+    if bool(args.tta) != bool(CLIP_TTA):
+        reasons.append(f"--tta={bool(args.tta)} does not match the deployed CLIP_TTA={CLIP_TTA}")
+    if deployed_name is None:
+        reasons.append(f"no backbone in this script corresponds to deployed {CLIP_ID}")
+
+    full_strength = not reasons
+    clip = results.get(deployed_name) if deployed_name else None
+    if clip is None and deployed_name and full_strength:
+        reasons.append(f"deployed backbone '{deployed_name}' was not in this run")
+        full_strength = False
+    if not full_strength:
         print()
-        print(f"not writing metrics.json: needs the default {len(DEFAULT_SEEDS)} "
-              f"seeds (got {len(args.seeds)}). Re-run without --seeds to publish.")
+        print("not writing metrics.json: " + "; ".join(reasons) + ".")
     if clip is not None and full_strength:
         import json, datetime
         avg = lambda k: round(float(np.nanmean(clip[k])), 1)
         Path("metrics.json").write_text(json.dumps({
-            "backbone": "clip",
+            "backbone": deployed_name,
+            "clip_id": CLIP_ID,
+            "tta": CLIP_TTA,
             # Argmax point: comparable with the fine-tuned baseline and across
             # backbones.
             "accuracy": round(float(np.mean(clip["seed_means"])), 1),

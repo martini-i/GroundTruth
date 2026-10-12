@@ -44,3 +44,8 @@ FINDINGS.md
 groundtruth.db
 groundtruth.db-wal
 groundtruth.db-shm
+
+# Paper drafts and the generator that builds them from the IEEE template.
+# Kept out of the repo for now; remove this line when the write-up is ready
+# to version alongside the code it reports on.
+paper/

@@ -1,0 +1,49 @@
+version: 2
+
+# Deliberately monthly, not weekly. This is a research project with a fixed
+# submission date; a stream of dependency PRs is noise against that. Monthly is
+# often enough to catch a security advisory and rare enough to ignore safely.
+#
+# Note the tension with reproducibility: the paper quotes numbers produced by
+# specific library versions, and transformers in particular has already changed
+# its CLIP return types under this code. Treat any update to torch,
+# transformers or scikit-learn as something to re-measure after, not merge on
+# green. The lock file is the record of what the reported numbers came from.
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      # One PR for the whole ML stack: these versions move together and are
+      # the ones that can change results.
+      ml:
+        patterns:
+          - "torch*"
+          - "transformers"
+          - "scikit-learn"
+          - "numpy"
+
+  - package-ecosystem: pip
+    directory: "/backend"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: npm
+    directory: "/frontend"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: gradle
+    directory: "/android"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

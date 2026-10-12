@@ -41,6 +41,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
 import cross_validate as cv
+import probe as P
 from dataset import clip_features
 
 parser = argparse.ArgumentParser()
@@ -112,22 +113,10 @@ def fit_fold_clip(tr_idx, va_idx, feats, labels, groups):
     image by image — the interesting question is not which is more accurate
     overall but *which images each one fails*, since the two fail differently.
     """
-    inner = _inner_splits(labels[tr_idx], groups[tr_idx])
-    base = make_pipeline(
-        StandardScaler(),
-        LogisticRegression(max_iter=5000, class_weight="balanced", C=1.0),
-    )
-    model = CalibratedClassifierCV(base, method="sigmoid", cv=inner)
-    model.fit(feats[tr_idx], labels[tr_idx])
+    model = P.fit_probe(feats[tr_idx], labels[tr_idx], groups[tr_idx])
     return model.predict_proba(feats[va_idx])[:, 1].tolist()
 
 
-def _inner_splits(y, g, max_splits=5):
-    """Grouped calibration folds inside one training fold; see frozen_features."""
-    per_class = min(len(set(g[y == c])) for c in (0, 1))
-    n = max(2, min(max_splits, per_class))
-    return list(StratifiedGroupKFold(n_splits=n, shuffle=True, random_state=0)
-                .split(np.zeros(len(y)), y, g))
 
 
 def main():

@@ -35,6 +35,12 @@ SKY_PIXEL_MIN_FRACTION = 0.03   # below this, treat as no real background band p
 SKY_CROP_MAX_FRACTION = 0.55    # never crop away more than this much of either axis
 CONTENT_ROW_MIN_FRACTION = 0.10  # a row/column counts as content above this share
 
+# Longest edge the segmentation mask is upsampled to before crop_sky reads its
+# bounding box from it. Uncapped, a 43 MP upload allocated ~26 GB and took 56
+# seconds. A box computed at this size and scaled back differs by a pixel or
+# two, which crop_sky's own guards already swamp.
+SEGMENT_MAX_EDGE = 1600
+
 # --- input gating ------------------------------------------------------------
 # A linear probe on CLIP features answers every image it is handed. Given a
 # carpet, a ceiling or a selfie it returns a calibrated-looking probability,
@@ -140,18 +146,27 @@ def segment_coarse(logits: torch.Tensor) -> np.ndarray:
 
 def segment(image: Image.Image, logits: torch.Tensor | None = None) -> np.ndarray:
     """
-    ADE20K class index per pixel, upsampled to the image's own resolution.
+    ADE20K class index per pixel, for crop_sky's bounding box.
 
     Interpolate-then-argmax, deliberately: that is the order crop_sky has always
-    used and every image in slope_dataset/ was cropped with it. Reversing the
-    two is cheaper but shifts boundaries by a pixel or so, which would put
-    stored crops and inference crops on different rules — invariant 1. Change it
-    only alongside `crop_dataset_sky.py --all` and a refit.
+    used. Reversing the two is cheaper but shifts boundaries by a pixel or so.
+
+    The upsample target is capped at SEGMENT_MAX_EDGE. Interpolating 150
+    channels of float32 to the source resolution allocated ~26 GB on a 43 MP
+    photograph and took 56 seconds end to end — a single large upload could
+    stall the server for a minute. crop_sky only needs a bounding box, and a
+    box derived at 1600px and scaled back is within a pixel or two of one
+    derived at 8000px, so the cap costs nothing real and removes the blow-up.
+
+    The mask is returned at the capped size; crop_sky scales the box itself.
     """
     if logits is None:
         logits = segmentation_logits(image)
+    w, h = image.size
+    scale = min(1.0, SEGMENT_MAX_EDGE / max(w, h))
+    size = (max(1, round(h * scale)), max(1, round(w * scale)))
     upsampled = nn.functional.interpolate(
-        logits, size=image.size[::-1], mode="bilinear", align_corners=False
+        logits, size=size, mode="bilinear", align_corners=False
     )
     return upsampled.argmax(dim=1)[0].numpy()
 
@@ -205,9 +220,18 @@ def crop_sky(image: Image.Image, pred: np.ndarray | None = None) -> Image.Image:
     left = min(left, int(w * SKY_CROP_MAX_FRACTION))
     right = max(right, int(w * 0.45))
 
+    # The mask may be smaller than the photograph (see SEGMENT_MAX_EDGE), so the
+    # box is in mask coordinates and has to be scaled back. Every cap above is a
+    # fraction, hence scale-invariant; only the absolute pixel tests below care,
+    # and those must run on the real image.
+    sx, sy = image.width / w, image.height / h
+    left, right = round(left * sx), round(right * sx)
+    top, bottom = round(top * sy), round(bottom * sy)
+    right, bottom = min(right, image.width), min(bottom, image.height)
+
     if bottom - top < 32 or right - left < 32:
         return image
-    if top == 0 and left == 0 and bottom >= h and right >= w:
+    if top == 0 and left == 0 and bottom >= image.height and right >= image.width:
         return image
 
     return image.crop((left, top, right, bottom))
@@ -321,12 +345,27 @@ def check_assessable(image: Image.Image, pred: np.ndarray | None = None) -> dict
 
 
 def _clip_embedding(image: Image.Image) -> torch.Tensor:
-    """CLIP image embedding for one PIL image, in the 512-d projected space."""
+    """
+    CLIP image embedding for one PIL image, in the projected space.
+
+    Mirrors whatever the probe was fitted with. The augmentation flag is read
+    out of slope_probe.joblib rather than hardcoded here, because a probe fitted
+    on flip-averaged features and served un-averaged features is a train/serve
+    mismatch of exactly the kind the crop-symmetry invariant exists to prevent —
+    and like that one, it would not raise anything, just quietly cost accuracy.
+    """
     load_model()
-    inputs = _clip_proc(images=image, return_tensors="pt").to(_device)
-    with torch.no_grad():
-        vision_out = _clip.vision_model(pixel_values=inputs["pixel_values"])
-        return _clip.visual_projection(vision_out.pooler_output)
+
+    def embed(img):
+        inputs = _clip_proc(images=img, return_tensors="pt").to(_device)
+        with torch.no_grad():
+            vision_out = _clip.vision_model(pixel_values=inputs["pixel_values"])
+            return _clip.visual_projection(vision_out.pooler_output)
+
+    emb = embed(image)
+    if _probe.get("tta"):
+        emb = (emb + embed(image.transpose(Image.FLIP_LEFT_RIGHT))) / 2
+    return emb
 
 
 def predict(image: Image.Image) -> dict:
