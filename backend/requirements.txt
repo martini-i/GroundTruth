@@ -3,7 +3,7 @@
 # runtime for the probe; everything else stays in the root requirements.txt).
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
-python-multipart>=0.0.9
+python-multipart>=0.0.32
 torch>=2.0.0
 torchvision>=0.15.0
 Pillow>=9.0.0
