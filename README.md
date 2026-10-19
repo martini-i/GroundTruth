@@ -46,6 +46,9 @@ build`; FastAPI then serves it on the same port. For the Android client see
 Both vision models download from Hugging Face on first run, so budget for that on a
 cold start.
 
+To reproduce the reported numbers, install the exact pinned environment instead:
+`venv/Scripts/pip install -r requirements.lock.txt`.
+
 ---
 
 ## Where the numbers are

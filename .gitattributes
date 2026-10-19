@@ -1,0 +1,3 @@
+# gradlew runs on Linux CI; a CRLF shebang fails there with exit 126.
+android/gradlew text eol=lf
+*.bat text eol=crlf
