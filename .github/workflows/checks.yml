@@ -189,7 +189,7 @@ jobs:
             $(grep -E '^(torch|torchvision)==' requirements.lock.txt)
           pip install -r requirements.lock.txt
       - name: cache hugging face weights
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/huggingface
           key: hf-${{ runner.os }}-segformer-b0
