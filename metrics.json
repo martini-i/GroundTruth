@@ -2,22 +2,22 @@
   "backbone": "clip-large",
   "clip_id": "openai/clip-vit-large-patch14",
   "tta": true,
-  "accuracy": 85.1,
-  "spread": 0.9,
-  "stable_recall": 83.9,
-  "unstable_recall": 86.0,
-  "auc": 94.4,
-  "brier": 0.104,
+  "accuracy": 86.4,
+  "spread": 0.7,
+  "stable_recall": 85.0,
+  "unstable_recall": 87.4,
+  "auc": 95.1,
+  "brier": 0.095,
   "deployed": {
     "flag_threshold": 0.35,
     "high_threshold": 0.65,
-    "unstable_recall": 92.9,
-    "unstable_precision": 81.2,
-    "stable_recall": 71.5,
-    "borderline_rate": 19.8
+    "unstable_recall": 94.8,
+    "unstable_precision": 83.2,
+    "stable_recall": 72.4,
+    "borderline_rate": 18.0
   },
-  "n_images": 187,
-  "n_groups": 178,
+  "n_images": 198,
+  "n_groups": 186,
   "folds": 5,
   "seeds": [
     1,
@@ -31,5 +31,5 @@
     9,
     10
   ],
-  "measured": "2026-10-10"
+  "measured": "2026-10-26"
 }

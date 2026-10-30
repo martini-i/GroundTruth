@@ -5,9 +5,10 @@ name: checks
 # cache keyed so loosely it returns the previous backbone's rows. None of them
 # raise. They just make every downstream number quietly wrong.
 #
-# So CI here is not about unit tests, which the project does not have. It runs
-# the invariant checks that already exist and gate the analysis by hand, plus
-# the builds that would otherwise only be discovered broken at demo time.
+# So CI is built around those invariants: the dataset check, a pytest suite
+# that pins each invariant with synthetic inputs, an import sweep, and the
+# builds that would otherwise only be discovered broken at demo time. Python
+# jobs install requirements.lock.txt, the same pins the probe was fitted with.
 #
 # Cost note: the repository carries ~224 MB of images, so checkout dominates
 # every job. Jobs that do not need the dataset use a sparse checkout, and the
@@ -46,20 +47,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           # The invariant tests use synthetic masks, so no images are needed.
+          # slope_probe.joblib is small and is what the deployed-config test
+          # loads; without it that test would silently skip.
           sparse-checkout: |
             *.py
             tests
-            requirements.txt
+            requirements.lock.txt
+            slope_probe.joblib
           sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
           cache: pip
-      - run: pip install -r requirements.txt
+          cache-dependency-path: requirements.lock.txt
+      # Install the exact pinned environment the probe was fitted in, so CI
+      # tests what ships rather than whatever is newest on PyPI. torch comes
+      # from the CPU index first: the default Linux wheel drags in several GB
+      # of CUDA libraries a runner never uses. The lock's torch==X then
+      # matches the X+cpu already installed, so pip leaves it alone.
+      - name: install pinned environment
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu \
+            $(grep -E '^(torch|torchvision)==' requirements.lock.txt)
+          pip install -r requirements.lock.txt
       # No model weights involved: both crop_sky and check_assessable accept a
       # precomputed segmentation, so the whole invariant surface runs in
-      # seconds. The deployed-config test skips when no probe is checked out.
-      - run: python -m pytest tests/ -q
+      # seconds. -rs lists any skipped test, so a skip cannot pass unnoticed.
+      - run: python -m pytest tests/ -q -rs
 
   # -------------------------------------------------------- imports and syntax
   python:
@@ -72,16 +86,23 @@ jobs:
           sparse-checkout: |
             *.py
             backend
-            requirements.txt
+            requirements.lock.txt
           sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
           cache: pip
-      - name: install
+          cache-dependency-path: requirements.lock.txt
+      # Install the exact pinned environment the probe was fitted in, so CI
+      # tests what ships rather than whatever is newest on PyPI. torch comes
+      # from the CPU index first: the default Linux wheel drags in several GB
+      # of CUDA libraries a runner never uses. The lock's torch==X then
+      # matches the X+cpu already installed, so pip leaves it alone.
+      - name: install pinned environment
         run: |
-          pip install -r requirements.txt
-          pip install -r backend/requirements.txt
+          pip install --index-url https://download.pytorch.org/whl/cpu \
+            $(grep -E '^(torch|torchvision)==' requirements.lock.txt)
+          pip install -r requirements.lock.txt
       # Catches the class of bug that actually occurred: a module importing a
       # package absent from requirements.txt, and syntax damage from scripted
       # edits. Importing is enough -- argparse modules exit, which is fine.
@@ -156,7 +177,17 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - run: pip install -r requirements.txt
+          cache-dependency-path: requirements.lock.txt
+      # Install the exact pinned environment the probe was fitted in, so CI
+      # tests what ships rather than whatever is newest on PyPI. torch comes
+      # from the CPU index first: the default Linux wheel drags in several GB
+      # of CUDA libraries a runner never uses. The lock's torch==X then
+      # matches the X+cpu already installed, so pip leaves it alone.
+      - name: install pinned environment
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu \
+            $(grep -E '^(torch|torchvision)==' requirements.lock.txt)
+          pip install -r requirements.lock.txt
       - name: cache hugging face weights
         uses: actions/cache@v4
         with:

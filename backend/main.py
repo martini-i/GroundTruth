@@ -141,7 +141,20 @@ def _load_upload_image(file: UploadFile) -> Image.Image:
 def health():
     # models_ready lets a caller tell "server up" from "server up and able to
     # answer a prediction without a long first-request stall".
-    return {"status": "ok", "models_ready": _warm["ready"]}
+    #
+    # The limits ride along so both clients read them from the server instead of
+    # keeping their own copies. The web client hardcoded a 12MB cap described as
+    # "mirroring the backend's" long after the backend moved to 25MB, so it
+    # refused photos the server would have accepted.
+    return {
+        "status": "ok",
+        "models_ready": _warm["ready"],
+        "max_upload_bytes": MAX_UPLOAD_BYTES,
+        "thresholds": {
+            "flag": model_utils.UNSTABLE_THRESHOLD,
+            "high_confidence": model_utils.UNSTABLE_HIGH_CONFIDENCE,
+        },
+    }
 
 
 @app.get("/stats")
@@ -174,10 +187,12 @@ def stats():
 
     probe_info = {}
     try:
-        model_utils.load_model()
+        # The probe alone, not the backbone: describing the deployed model must
+        # not block behind a cold CLIP load while the server is still warming.
+        probe = model_utils.load_probe()
         probe_info = {
-            "backbone": model_utils._probe.get("clip_id"),
-            "fitted_on": model_utils._probe.get("n_train"),
+            "backbone": probe.get("clip_id"),
+            "fitted_on": probe.get("n_train"),
         }
     except Exception:
         pass

@@ -13,8 +13,8 @@ Kotlin + Jetpack Compose, single module, no navigation library.
 JPEG and posts it to the existing FastAPI backend.
 
 That is a deliberate choice, not a shortcut. The deployed classifier is a
-calibrated probe on frozen CLIP ViT-B/32 features, with SegFormer removing sky and
-water first — roughly 600MB of weights plus a scikit-learn estimator. Running it
+calibrated probe on frozen CLIP ViT-L/14 features, with SegFormer removing sky and
+water first — roughly 1.8GB of weights plus a scikit-learn estimator. Running it
 on-device means converting two transformers to ONNX or TFLite and reimplementing
 the sigmoid calibration in Kotlin.
 
@@ -144,15 +144,16 @@ Realistic path, in order of difficulty:
    ship a much smaller segmentation model or skip cropping on-device — but note
    that would break the train/serve symmetry the project depends on, since every
    fitted image was cropped. Measure the accuracy cost before accepting it.
-2. **Export CLIP's vision tower to ONNX** (`openai/clip-vit-base-patch32`,
-   ~350MB as float32, ~90MB quantised to int8) and run it with ONNX Runtime
+2. **Export CLIP's vision tower to ONNX** (`openai/clip-vit-large-patch14`,
+   ~1.2GB as float32, ~300MB quantised to int8 — the vision tower alone) and run it with ONNX Runtime
    Mobile. Verify the embeddings match the Python ones to a tight tolerance —
    silent preprocessing differences are the usual failure here.
-3. **Port the probe.** It is 512 weights and a bias plus a `StandardScaler`, so
-   the linear part is trivial. The sigmoid calibration is the fiddly bit and must
+3. **Port the probe.** It is 768 weights and a bias plus a `StandardScaler`, so
+   the linear part is trivial. Embed the mirrored image too and average the two:
+   the probe is fitted on flip-averaged features (`tta` in `slope_probe.joblib`). The sigmoid calibration is the fiddly bit and must
    be exported explicitly, not re-fitted.
 4. **Keep the thresholds server-sourced anyway**, cached locally, so the two
    surfaces cannot disagree.
 
-Expect roughly 100–400MB of app size and a few seconds per inference on a mid-range
+Expect roughly 300MB–1.3GB of app size and a few seconds per inference on a mid-range
 device.

@@ -8,24 +8,19 @@ GroundTruth reads a ground-level photograph of a slope and reports whether visib
 surface indicators suggest potential instability: cracks, scarps, loose debris,
 disturbed soil, undercutting, rockfall.
 
-> It does **not** predict landslides and does **not** assess subsurface conditions.
-> Slope stability depends on water content, bedding orientation and loading history,
-> none of which appear in a photograph. This is a research prototype, not a safety
-> determination.
-
-That distinction is load-bearing throughout the codebase, not a disclaimer bolted on
-the front. The wording is deliberate wherever it appears.
+> It does **not** predict landslides or assess subsurface conditions. Stability
+> depends on water content, bedding and loading history, none of which show in a
+> photo. This is a research prototype, not a safety assessment.
 
 ---
 
 ## What it does
 
-A frozen CLIP backbone with a small calibrated probe fitted on labelled slope
-photographs. Sky and open water are removed first, and images the model cannot speak
-to — indoors, too dark, no ground in frame — are refused rather than scored.
+A frozen CLIP backbone with a small calibrated probe trained on labelled slope
+photos. Sky and water are cropped out first. Photos it can't assess (indoors, too
+dark, no ground visible) are rejected instead of scored.
 
-Available as a web app and an Android client. Both call the same backend, so both
-give the same answer for the same photograph.
+There is a web app and an Android client. Both use the same backend.
 
 ---
 
@@ -43,19 +38,17 @@ Build the web app with `npm --prefix frontend install && npm --prefix frontend r
 build`; FastAPI then serves it on the same port. For the Android client see
 [`android/README.md`](android/README.md).
 
-Both vision models download from Hugging Face on first run, so budget for that on a
-cold start.
+Both vision models download from Hugging Face on first run.
 
-To reproduce the reported numbers, install the exact pinned environment instead:
+To reproduce the reported numbers, install the pinned environment instead:
 `venv/Scripts/pip install -r requirements.lock.txt`.
 
 ---
 
 ## Where the numbers are
 
-Nothing about performance, dataset size or thresholds is written down in this file,
-because all of it goes stale the moment the data or the code changes. Ask the
-project instead:
+Performance, dataset size and thresholds change with the data, so they aren't
+written here. Look them up instead:
 
 | question | where the answer lives |
 |---|---|
@@ -65,52 +58,43 @@ project instead:
 | what does a script do, and what flags | `python <script>.py --help` |
 | which images does it get wrong | `python audit_errors.py` |
 
-Regenerate the measurements with `python frozen_features.py`, which rewrites
-`metrics.json`. Refit the deployed model with `python train_probe.py`.
+`python frozen_features.py` regenerates `metrics.json`. `python train_probe.py`
+refits the deployed model.
 
 ---
 
 ## The three invariants
 
-Each of these has been violated at least once, and each failure was silent — no
-error, just quietly wrong numbers. They are the only rules in this project worth
-memorising.
+Breaking any of these gives wrong numbers without an error.
 
-**1. Crop symmetry.** Images in `slope_dataset/` are stored already cropped. Any new
-image must be run through `crop_dataset_sky.py` before training, or it is framed
-differently from every image the probe was fitted on.
+**1. Crop symmetry.** Images in `slope_dataset/` are stored already cropped. Run
+new images through `crop_dataset_sky.py` before training.
 
-**2. Site grouping.** Photographs of the same location must share a `site_id` in
-`labels.csv`. Without it, near-duplicate images land on both sides of an evaluation
-split and the result measures memory rather than generalisation.
+**2. Site grouping.** Photos of the same location must share a `site_id` in
+`labels.csv`, so they never end up on both sides of a CV split.
 
-**3. Feature cache keying.** Cached features are keyed on the file list plus each
-file's size and modification time — never on the number of files. A count-keyed
-cache returns feature rows belonging to a previous set of images, which still line
-up positionally against the new labels.
+**3. Feature cache keying.** The feature cache is keyed on the file list plus each
+file's size and modification time, not the file count. Otherwise a stale cache can
+silently line up old features with new labels.
 
-Run `python verify_dataset.py` before trusting any number, and `python -m pytest`
-for the rest. Both run in CI on every push, so an invariant cannot quietly break
-between one measurement and the next — which is how each of them broke before.
+`python verify_dataset.py` and `python -m pytest` check all three, and both run in
+CI on every push.
 
 ---
 
 ## Known limitations
 
-**It cannot see underground.** The most important one. Two slopes can look identical
-and behave completely differently.
-
-**The model exploits a semantic shortcut.** It separates engineered cuttings from
-natural cliffs more reliably than it separates failing ground from intact ground.
-The counterexamples that would break it are unstable engineered cuts and stable
-natural cliffs.
-
-**The indicator taxonomy is not independent of the label.** Categories were named
-after the stable/unstable call had been made, so none straddles the boundary. Fixing
-it needs indicator labels assigned blind to the class.
-
-**Some dataset images lack licence provenance.** Unresolved, and it blocks any
-release of the dataset.
+- **Surface only.** Two slopes that look the same can behave very differently
+  underground.
+- **Bare rock gets over-flagged.** Riprap, gabions, rock cuts and bedded cliffs are
+  often marked unstable because rough rock texture looks like debris.
+- **Scene shortcut.** The model tells engineered cuts from natural slopes more
+  reliably than it tells failing ground from intact ground.
+- **Indicator labels aren't blind.** Indicator categories were named after the
+  stable/unstable label was set. New rows leave `primary_indicator` blank until it
+  can be assigned without seeing the label.
+- **Licensing gaps.** Some images have no recorded licence, so the dataset can't be
+  released yet.
 
 ---
 

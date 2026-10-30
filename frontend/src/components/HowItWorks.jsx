@@ -11,7 +11,8 @@ const STEPS = [
     title: "Feature extraction",
     body:
       "The cropped photo passes through a frozen CLIP vision transformer, which turns it into a " +
-      "512-number description of what the image contains. Nothing here is trained on slope data.",
+      "list of several hundred numbers describing what the image contains. Nothing here is " +
+      "trained on slope data.",
   },
   {
     n: "03",
@@ -20,14 +21,17 @@ const STEPS = [
       "A small calibrated classifier reads that description and estimates the probability of visible " +
       "instability indicators. It has roughly a thousand parameters, not millions.",
   },
-  {
-    n: "04",
-    title: "Threshold",
-    body:
-      "The probability is compared against a 35% cutoff rather than 50%, because missing an unstable " +
-      "slope is treated as a costlier error than a false alarm.",
-  },
 ];
+
+// The cutoff comes from the server via App, not a literal here, so this page
+// cannot describe a threshold the app no longer uses.
+const thresholdStep = (flag) => ({
+  n: "04",
+  title: "Threshold",
+  body:
+    `The probability is compared against a ${Math.round(flag * 100)}% cutoff rather than 50%, ` +
+    "because missing an unstable slope is treated as a costlier error than a false alarm.",
+});
 
 const INDICATORS = [
   ["Tension cracks", "Open cracks running across or along a slope surface"],
@@ -38,7 +42,7 @@ const INDICATORS = [
   ["Rockfall evidence", "Detached blocks on or below the slope"],
 ];
 
-export default function HowItWorks() {
+export default function HowItWorks({ flag }) {
   return (
     <div className="page">
       <section className="page-block">
@@ -47,7 +51,7 @@ export default function HowItWorks() {
           Four stages run on every image. Each one is deliberately simple and inspectable.
         </p>
         <ol className="steps">
-          {STEPS.map((s) => (
+          {[...STEPS, thresholdStep(flag)].map((s) => (
             <li key={s.n} className="step">
               <span className="step-num">{s.n}</span>
               <div>

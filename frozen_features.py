@@ -11,6 +11,7 @@ Backbones:
     resnet18   ImageNet supervised, 512-d   — the conventional starting point
     dinov2     DINOv2 ViT-S/14, 384-d       — self-supervised, far broader pretraining
     clip       CLIP ViT-B/32, 512-d         — image-text pretraining
+    clip-large CLIP ViT-L/14, 768-d         — the deployed backbone
 
 Uses the same grouped, stratified folds as cross_validate.py, so numbers are
 directly comparable with the fine-tuned baseline it measures.
@@ -36,12 +37,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import brier_score_loss, confusion_matrix, roc_auc_score
-from sklearn.model_selection import StratifiedGroupKFold
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
 from PIL import Image
 
 import cross_validate as cv
@@ -208,41 +203,16 @@ def evaluate(feats, labels, groups):
     """
     out = defaultdict(list)
     for seed in args.seeds:
-        splitter = StratifiedGroupKFold(n_splits=args.folds, shuffle=True,
-                                        random_state=seed)
         seed_accs = []
-        for tr, va in splitter.split(feats, labels, groups):
-            assert not (set(groups[tr]) & set(groups[va])), "group leak"
-
+        # probe.grouped_cv and probe.score, the same split, fit and metrics the
+        # experiments use — so this script cannot score differently from them.
+        for _, tr, va in P.grouped_cv(feats, labels, groups, [seed], args.folds):
             model = P.fit_probe(feats[tr], labels[tr], groups[tr],
                                 C=args.C, method=args.calibration)
-
-            y = labels[va]
             p = model.predict_proba(feats[va])[:, 1]
-
-            # Argmax point: comparable across backbones and with the baseline.
-            pred = (p >= 0.5).astype(int)
-            cm = confusion_matrix(y, pred, labels=[0, 1])
-            acc = (pred == y).mean() * 100
-            out["acc"].append(acc); seed_accs.append(acc)
-            out["stable_recall"].append(cm[0][0] / max(cm[0].sum(), 1) * 100)
-            out["unstable_recall"].append(cm[1][1] / max(cm[1].sum(), 1) * 100)
-
-            # Deployed point: what a user of the app actually gets.
-            flagged = (p >= FLAG_THRESHOLD).astype(int)
-            fcm = confusion_matrix(y, flagged, labels=[0, 1])
-            tp, fp = fcm[1][1], fcm[0][1]
-            out["flag_unstable_recall"].append(tp / max(fcm[1].sum(), 1) * 100)
-            out["flag_stable_recall"].append(fcm[0][0] / max(fcm[0].sum(), 1) * 100)
-            out["flag_precision"].append(tp / max(tp + fp, 1) * 100)
-            out["borderline_rate"].append(
-                ((p >= FLAG_THRESHOLD) & (p < HIGH_THRESHOLD)).mean() * 100
-            )
-
-            # Threshold-free ranking quality, and whether the calibrated
-            # probabilities mean what they say.
-            out["auc"].append(roc_auc_score(y, p) * 100 if len(set(y)) > 1 else np.nan)
-            out["brier"].append(brier_score_loss(y, p))
+            for k, v in P.score(labels[va], p, FLAG_THRESHOLD, HIGH_THRESHOLD).items():
+                out[k].append(v)
+            seed_accs.append(out["acc"][-1])
         out["seed_means"].append(np.mean(seed_accs))
     return out
 
@@ -280,9 +250,9 @@ def main():
     # Only a full-strength run may write it. A quick exploratory run with a
     # couple of seeds would otherwise overwrite the public figure with a
     # lower-confidence estimate, silently and with no indication in the app.
-    # --tta is excluded deliberately: the deployed pipeline does not do TTA, so
-    # publishing a TTA figure would report an accuracy the app cannot deliver.
-    # metrics.json must describe the DEPLOYED pipeline, so publish only the row
+    # --tta must match the deployed CLIP_TTA either way: publishing a figure
+    # measured with a different augmentation from the one the app applies would
+    # report an accuracy the app cannot deliver. metrics.json must describe the DEPLOYED pipeline, so publish only the row
     # whose backbone and augmentation match what dataset.py actually fits. The
     # old version always published the row named "clip", which would quietly
     # report one model's accuracy while the app served another.

@@ -11,6 +11,8 @@ frozen_features.py — never repeated in prose, which goes stale silently.
 Fit the probe with train_probe.py, which writes slope_probe.joblib.
 """
 
+import threading
+
 import joblib
 import numpy as np
 import torch
@@ -74,7 +76,7 @@ INDOOR_MAX_FRACTION = 0.35     # dataset max 0.171 — refuse well clear of it
 INDOOR_HINT_FRACTION = 0.25    # weaker corroborating signal; still above 0.171
 PERSON_MAX_FRACTION = 0.40     # dataset max 0.125
 TERRAIN_MIN_FRACTION = 0.02    # dataset min 0.037 — bare engineered faces run low
-VISIBLE_MIN_FRACTION = 0.10    # dataset min 0.654
+VISIBLE_MIN_FRACTION = 0.10    # dataset min 0.56
 MIN_EDGE_PIXELS = 64           # dataset min short edge 210
 MAX_ASPECT_RATIO = 5.0         # dataset max 4.08 (stable_slope_003, a wide pan)
 MIN_MEAN_LUMINANCE = 18.0      # dataset min 65.3
@@ -88,32 +90,51 @@ _probe = None
 _seg_processor = None
 _seg_model = None
 
+# The backend warms these in a background thread while already serving requests,
+# so the first /predict can arrive mid-load. Without a lock both threads see
+# None and each loads its own 1.7 GB copy of CLIP — double the memory and double
+# the cold-start time, on exactly the request the warmup exists to speed up.
+_load_lock = threading.Lock()
+_seg_lock = threading.Lock()
+
+
+def load_probe() -> dict:
+    """
+    The fitted probe and the config it records, without loading CLIP.
+
+    Cheap (a few hundred KB), so callers that only need to report what is
+    deployed — /stats — do not have to wait behind a backbone load.
+    """
+    global _probe
+    with _load_lock:
+        if _probe is None:
+            _probe = joblib.load(PROBE_PATH)
+        return _probe
+
 
 def load_model():
     """Load CLIP and the fitted probe once and cache them. Safe to call repeatedly."""
-    global _device, _clip, _clip_proc, _probe
-    if _clip is not None:
-        return _clip, _probe["class_names"], _device
+    global _device, _clip, _clip_proc
+    probe = load_probe()
+    with _load_lock:
+        if _clip is None:
+            from transformers import AutoImageProcessor, CLIPModel
 
-    from transformers import AutoImageProcessor, CLIPModel
-
-    _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    _probe = joblib.load(PROBE_PATH)
-    _clip_proc = AutoImageProcessor.from_pretrained(_probe["clip_id"])
-    _clip = CLIPModel.from_pretrained(_probe["clip_id"]).eval().to(_device)
-    return _clip, _probe["class_names"], _device
+            _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            _clip_proc = AutoImageProcessor.from_pretrained(probe["clip_id"])
+            _clip = CLIPModel.from_pretrained(probe["clip_id"]).eval().to(_device)
+    return _clip, probe["class_names"], _device
 
 
 def _load_segmentation_model():
     """Load the pretrained sky-segmentation model once and cache it."""
     global _seg_processor, _seg_model
-    if _seg_model is not None:
-        return _seg_processor, _seg_model
-
-    from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
-    _seg_processor = SegformerImageProcessor.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
-    _seg_model = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
-    _seg_model.eval()
+    with _seg_lock:
+        if _seg_model is None:
+            from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
+            _seg_processor = SegformerImageProcessor.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
+            _seg_model = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
+            _seg_model.eval()
     return _seg_processor, _seg_model
 
 

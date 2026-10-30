@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
  *
  * Deliberately not an on-device model. The deployed classifier is a calibrated
  * probe on frozen CLIP features, with SegFormer doing sky removal first — roughly
- * 600MB of weights and a scikit-learn estimator. Porting that means converting
+ * 1.8GB of weights and a scikit-learn estimator. Porting that means converting
  * two transformers to ONNX and reimplementing the calibration in Kotlin, and it
  * would fork the decision thresholds across two codebases. See README for what an
  * offline build would actually require.

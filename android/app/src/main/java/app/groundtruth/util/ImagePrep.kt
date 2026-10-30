@@ -16,8 +16,8 @@ import java.io.ByteArrayOutputStream
  * Two problems this solves, both specific to phones:
  *
  * 1. **Size.** A modern phone camera produces 12–50MP files, well past the
- *    backend's 12MB cap. Uploading one over field cellular would be slow even if
- *    it were accepted. The classifier resizes to 224x224 internally anyway, so
+ *    12MB this client keeps uploads under (the backend itself accepts 25MB).
+ *    Uploading one over field cellular would be slow even where it is accepted. The classifier resizes to 224x224 internally anyway, so
  *    detail beyond roughly 1600px on the long edge is discarded regardless — but
  *    sky segmentation runs at full resolution first, so downscaling too
  *    aggressively would coarsen the crop.

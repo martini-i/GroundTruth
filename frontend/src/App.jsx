@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ImageUpload from "./components/ImageUpload";
 import ConfidenceBars from "./components/ConfidenceBars";
 import AssessmentCard from "./components/AssessmentCard";
@@ -14,9 +14,15 @@ const EXAMPLES = [
   { label: "Scarp", tone: "unstable", path: "/examples/unstable_scarp_007.jpg" },
 ];
 
-// Mirrors the backend's own cap. Rejecting here means a 12MB phone photo fails
-// instantly with an explanation instead of after a long upload.
-const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+// Fallbacks only. The server reports its real upload cap and thresholds on
+// /health, and those win as soon as it answers. A hardcoded copy of the cap went
+// stale once already: it stayed at 12MB after the backend moved to 25MB.
+const DEFAULT_LIMITS = {
+  max_upload_bytes: 25 * 1024 * 1024,
+  thresholds: { flag: 0.35, high_confidence: 0.65 },
+};
+
+const pct = (x) => Math.round(x * 100);
 
 const VIEWS = [
   ["analyze", "Analyze"],
@@ -37,6 +43,11 @@ export default function App() {
   const [error, setError] = useState(null);
   const [warm, setWarm] = useState(null); // null unknown | false warming | true ready
   const [view, setView] = useState("analyze");
+  const [limits, setLimits] = useState(DEFAULT_LIMITS);
+  // The paste listener is bound once and keeps the first render's
+  // handleFileSelected, so the cap is read through a ref rather than from state.
+  const limitsRef = useRef(limits);
+  limitsRef.current = limits;
   // Respect the reader's OS setting on a first visit; a stored choice always wins
   // after that. Defaulting everyone to dark ignored light-mode users entirely.
   const [theme, setTheme] = useState(() => {
@@ -61,6 +72,9 @@ export default function App() {
         const h = await fetchHealth();
         if (cancelled) return;
         setWarm(!!h.models_ready);
+        if (h.max_upload_bytes && h.thresholds) {
+          setLimits({ max_upload_bytes: h.max_upload_bytes, thresholds: h.thresholds });
+        }
         if (!h.models_ready) timer = setTimeout(check, 2000);
       } catch {
         if (!cancelled) {
@@ -118,9 +132,12 @@ export default function App() {
       setError("That file isn't an image. Choose a JPEG or PNG photo.");
       return;
     }
-    if (selectedFile.size > MAX_UPLOAD_BYTES) {
+    const cap = limitsRef.current.max_upload_bytes;
+    if (selectedFile.size > cap) {
       const mb = (selectedFile.size / 1024 / 1024).toFixed(1);
-      setError(`That image is ${mb} MB. The limit is 12 MB — try a smaller version.`);
+      setError(
+        `That image is ${mb} MB. The limit is ${Math.round(cap / 1024 / 1024)} MB — try a smaller version.`
+      );
       return;
     }
 
@@ -194,6 +211,8 @@ export default function App() {
     }
   }
 
+
+  const { flag, high_confidence: high } = limits.thresholds;
 
   return (
     <div className="app" data-theme={theme}>
@@ -344,20 +363,23 @@ export default function App() {
 
           <footer>
             <p>
-              The Assessment is the actual call: it flags at 35% P(unstable), not 50%, because
-              missing an unstable slope costs more than a false alarm. It can disagree with the
-              highest confidence bar — that's intentional.
+              The Assessment is the actual call: it flags at {pct(flag)}% P(unstable), not 50%,
+              because missing an unstable slope costs more than a false alarm. It can disagree with
+              the highest confidence bar — that's intentional.
             </p>
             <ul>
-              <li>P(unstable) ≥ 65% → Potentially Unstable</li>
-              <li>35% ≤ P(unstable) &lt; 65% → Potentially Unstable (borderline) — inspect further</li>
-              <li>P(unstable) &lt; 35% → Stable</li>
+              <li>P(unstable) ≥ {pct(high)}% → Potentially Unstable</li>
+              <li>
+                {pct(flag)}% ≤ P(unstable) &lt; {pct(high)}% → Potentially Unstable (borderline) —
+                inspect further
+              </li>
+              <li>P(unstable) &lt; {pct(flag)}% → Stable</li>
             </ul>
           </footer>
         </>
       )}
 
-      {view === "how" && <HowItWorks />}
+      {view === "how" && <HowItWorks flag={flag} />}
       {view === "about" && <About />}
     </div>
   );
